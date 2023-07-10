@@ -46,7 +46,8 @@ public class PathfinderConfig {
     private boolean useBoats;
     private boolean useFairyRings;
     private boolean useTeleports;
-    private boolean useItemsAndSpells;
+    private boolean useItems;
+    private boolean useSpells;
     private int agilityLevel;
     private int rangedLevel;
     private int strengthLevel;
@@ -81,7 +82,8 @@ public class PathfinderConfig {
         useBoats = config.useBoats();
         useFairyRings = config.useFairyRings();
         useTeleports = config.useTeleports();
-        useItemsAndSpells = config.useItemsAndSpells();
+        useItems = config.useItems();
+        useSpells = config.useSpells();
 
         if (GameState.LOGGED_IN.equals(client.getGameState())) {
             agilityLevel = client.getBoostedSkillLevel(Skill.AGILITY);
@@ -163,7 +165,6 @@ public class PathfinderConfig {
         final boolean isCanoe = isBoat && transportWoodcuttingLevel > 1;
         final boolean isPrayerLocked = transportPrayerLevel > 1;
         final boolean isQuestLocked = transport.isQuestLocked();
-        final boolean isItemOrSpell = transport.isOneWay();
 
         if (isAgilityShortcut) {
             if (!useAgilityShortcuts || agilityLevel < transportAgilityLevel) {
@@ -190,10 +191,6 @@ public class PathfinderConfig {
         }
 
         if (isTeleport && !useTeleports) {
-            return false;
-        }
-
-        if (isItemOrSpell && !useItemsAndSpells) {
             return false;
         }
 

@@ -205,8 +205,12 @@ public class Transport {
         addTransports(transports, "/fairy_rings.txt", TransportType.FAIRY_RING);
         addTransports(transports, "/teleports.txt", TransportType.TELEPORT);
 
-        if (config.useTeleports()) {
+        if (config.useItems()) {
             addTransports(transports, config, "/items.txt", TransportType.ONE_WAY);
+        }
+
+        if (config.useSpells()) {
+            addTransports(transports, config, "/spells.txt", TransportType.ONE_WAY);
         }
 
         return transports;
