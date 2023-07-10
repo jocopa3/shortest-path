@@ -66,6 +66,14 @@ public class CollisionMap extends SplitFlagMap {
             }
         }
 
+        if (node.isRootNode()) {
+            for (Transport transport : config.getTransports().getOrDefault(null, new ArrayList<>())) {
+                if (config.useTransport(transport)) {
+                    neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait()));
+                }
+            }
+        }
+
         boolean[] traversable;
         if (isBlocked(x, y, z)) {
             boolean westBlocked = isBlocked(x - 1, y, z);

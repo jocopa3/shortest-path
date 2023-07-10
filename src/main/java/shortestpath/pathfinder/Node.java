@@ -20,6 +20,10 @@ public class Node {
         this(position, previous, 0);
     }
 
+    public boolean isRootNode() {
+        return previous == null;
+    }
+
     public List<WorldPoint> getPath() {
         List<WorldPoint> path = new LinkedList<>();
         Node node = this;
