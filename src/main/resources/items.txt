@@ -1,0 +1,11 @@
+	3216 3427 0	Varrock teleport (tablet) 8007				1
+	3223 3220 0	Lumbridge teleport (tablet) 8008				1
+	2968 3380 0	Falador teleport (tablet) 8009				1
+	2759 3481 0	Camelot teleport (tablet) 8010				1
+	2664 3307 0	Ardougne teleport (tablet) 8011				1
+	2551 3114 0	Watchtower teleport (tablet) 8012				1
+	2606 3221 0	Ardougne cloak Kandarin Monastery 13121				1
+	2606 3221 0	Ardougne cloak Kandarin Monastery 13122				1
+	2606 3221 0	Ardougne cloak Kandarin Monastery 13123				1
+	2606 3221 0	Ardougne cloak Kandarin Monastery 13124				1
+#	3216 3427 0	Teleport to house (tablet) 8013				1

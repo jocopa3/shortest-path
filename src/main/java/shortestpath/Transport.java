@@ -36,6 +36,10 @@ public class Transport {
     @Getter
     private boolean isAgilityShortcut;
 
+    /** Whether the transport is a magic shortcut */
+    @Getter
+    private boolean isMagicShortcut;
+
     /** Whether the transport is a crossbow grapple shortcut */
     @Getter
     private boolean isGrappleShortcut;
@@ -51,6 +55,10 @@ public class Transport {
     /** Whether the transport is a teleport */
     @Getter
     private boolean isTeleport;
+
+    /** Whether the transport is a one-way teleport */
+    @Getter
+    private boolean isOneWay;
 
     /** The additional travel time */
     @Getter
@@ -71,13 +79,17 @@ public class Transport {
 
         String[] parts = line.split("\t");
 
-        String[] parts_origin = parts[0].split(DELIM);
-        String[] parts_destination = parts[1].split(DELIM);
+        if (parts[0].isEmpty()) {
+            origin = null;
+        } else {
+            String[] parts_origin = parts[0].split(DELIM);
+            origin = new WorldPoint(
+                Integer.parseInt(parts_origin[0]),
+                Integer.parseInt(parts_origin[1]),
+                Integer.parseInt(parts_origin[2]));
+        }
 
-        origin = new WorldPoint(
-            Integer.parseInt(parts_origin[0]),
-            Integer.parseInt(parts_origin[1]),
-            Integer.parseInt(parts_origin[2]));
+        String[] parts_destination = parts[1].split(DELIM);
         destination = new WorldPoint(
             Integer.parseInt(parts_destination[0]),
             Integer.parseInt(parts_destination[1]),
@@ -113,6 +125,7 @@ public class Transport {
             this.wait = Integer.parseInt(parts[6]);
         }
 
+        isMagicShortcut = getRequiredLevel(Skill.MAGIC) > 1;
         isAgilityShortcut = getRequiredLevel(Skill.AGILITY) > 1;
         isGrappleShortcut = isAgilityShortcut && (getRequiredLevel(Skill.RANGED) > 1 || getRequiredLevel(Skill.STRENGTH) > 1);
     }
@@ -157,10 +170,13 @@ public class Transport {
                     Transport transport = new Transport(line);
                     transport.isBoat = TransportType.BOAT.equals(transportType);
                     transport.isTeleport = TransportType.TELEPORT.equals(transportType);
+                    transport.isOneWay = TransportType.ONE_WAY.equals(transportType);
+
                     WorldPoint origin = transport.getOrigin();
                     transports.computeIfAbsent(origin, k -> new ArrayList<>()).add(transport);
                 }
             }
+
             for (WorldPoint origin : fairyRings) {
                 for (int i = 0; i < fairyRings.size(); i++) {
                     WorldPoint destination = fairyRings.get(i);
@@ -189,6 +205,10 @@ public class Transport {
         addTransports(transports, "/fairy_rings.txt", TransportType.FAIRY_RING);
         addTransports(transports, "/teleports.txt", TransportType.TELEPORT);
 
+        if (config.useTeleports()) {
+            addTransports(transports, config, "/items.txt", TransportType.ONE_WAY);
+        }
+
         return transports;
     }
 
@@ -196,6 +216,7 @@ public class Transport {
         TRANSPORT,
         BOAT,
         FAIRY_RING,
-        TELEPORT
+        TELEPORT,
+        ONE_WAY
     }
 }
