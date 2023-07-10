@@ -177,6 +177,9 @@ public class Transport {
                     if (!config.useGrappleShortcuts() && transport.isGrappleShortcut) {
                         continue;
                     }
+                    if (!config.useItemsAndSpells() && transport.isOneWay) {
+                        continue;
+                    }
                     WorldPoint origin = transport.getOrigin();
                     transports.computeIfAbsent(origin, k -> new ArrayList<>()).add(transport);
                 }
@@ -219,8 +222,12 @@ public class Transport {
             addTransports(transports, config, "/teleports.txt", TransportType.TELEPORT);
         }
 
-        if (config.useTeleports()) {
+        if (config.useItems()) {
             addTransports(transports, config, "/items.txt", TransportType.ONE_WAY);
+        }
+
+        if (config.useSpells()) {
+            addTransports(transports, config, "/spells.txt", TransportType.ONE_WAY);
         }
 
         return transports;
