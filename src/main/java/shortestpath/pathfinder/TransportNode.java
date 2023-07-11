@@ -1,10 +1,14 @@
 package shortestpath.pathfinder;
 
 import net.runelite.api.coords.WorldPoint;
+import shortestpath.Transport;
 
 public class TransportNode extends Node implements Comparable<TransportNode> {
-    public TransportNode(WorldPoint position, Node previous, int wait) {
+    final private Transport transport;
+
+    public TransportNode(WorldPoint position, Node previous, int wait, Transport transport) {
         super(position, previous, wait);
+        this.transport = transport;
     }
 
     @Override

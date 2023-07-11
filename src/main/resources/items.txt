@@ -1,11 +1,37 @@
-	3216 3427 0	Varrock teleport (tablet) 8007				1
-	3223 3220 0	Lumbridge teleport (tablet) 8008				1
-	2968 3380 0	Falador teleport (tablet) 8009				1
-	2759 3481 0	Camelot teleport (tablet) 8010				1
-	2664 3307 0	Ardougne teleport (tablet) 8011				1
-	2551 3114 0	Watchtower teleport (tablet) 8012				1
-	2606 3221 0	Ardougne cloak Kandarin Monastery 13121				1
-	2606 3221 0	Ardougne cloak Kandarin Monastery 13122				1
-	2606 3221 0	Ardougne cloak Kandarin Monastery 13123				1
-	2606 3221 0	Ardougne cloak Kandarin Monastery 13124				1
-#	3216 3427 0	Teleport to house (tablet) 8013				1
+# Tablets
+	3213 3424 0	Varrock teleport (tablet)		1 8007		4
+	3222 3218 0	Lumbridge teleport (tablet)		1 8008		4
+	2968 3380 0	Falador teleport (tablet)		1 8009		4
+	2759 3481 0	Camelot teleport (tablet)		1 8010		4
+	2664 3307 0	Ardougne teleport (tablet)		1 8011	Plague City	4
+	2551 3114 0	Watchtower teleport (tablet)		1 8012	Watchtower	4
+	2606 3221 0	Ardougne cloak		1 13121;1 13122;1 13123;1 13124		4
+#	3216 3427 0	Teleport to house (tablet)		1 8013		4
+
+# Jewlery
+	2520 3571 0	Games Necklace (Barbarian Outpost)		1 3853;1 3855;1 3857;1 3859;1 3861;1 3863;1 3865;1 3867		4
+	2898 3554 0	Games Necklace (Burthorpe)		1 3853;1 3855;1 3857;1 3859;1 3861;1 3863;1 3865;1 3867		4
+	3245 9500 0	Games Necklace (Tears of Guthix)		1 3853;1 3855;1 3857;1 3859;1 3861;1 3863;1 3865;1 3867		4
+	2967 4384 0	Games Necklace (Corporeal Beast)		1 3853;1 3855;1 3857;1 3859;1 3861;1 3863;1 3865;1 3867		4
+	1624 3938 0	Games Necklace (Wintertodt Camp)		1 3853;1 3855;1 3857;1 3859;1 3861;1 3863;1 3865;1 3867		4
+	3315 3235 0	Ring of Dueling (PvP Arena)		1 1 2552;1 1 2554;1 1 2556;1 1 2558;1 1 2560;1 1 2562;1 1 2564;1 1 2566		4
+	2441 3091 0	Ring of Dueling (Castle Wars)		1 1 2552;1 1 2554;1 1 2556;1 1 2558;1 1 2560;1 1 2562;1 1 2564;1 1 2566		4
+	3151 3636 0	Ring of Dueling (Ferox Enclave)		1 1 2552;1 1 2554;1 1 2556;1 1 2558;1 1 2560;1 1 2562;1 1 2564;1 1 2566		4
+	2883 3549 0	Combat Bracelet (Warriors' Guild)		1 11118;1 11120;1 11122;1 11124;1 11126;1 11972;1 11974;		4
+	3189 3368 0	Combat Bracelet (Champions' Guild)		1 11118;1 11120;1 11122;1 11124;1 11126;1 11972;1 11974;		4
+	3053 3487 0	Combat Bracelet (Monastery)		1 11118;1 11120;1 11122;1 11124;1 11126;1 11972;1 11974;		4
+	2654 3441 0	Combat Bracelet (Ranging Guild)		1 11118;1 11120;1 11122;1 11124;1 11126;1 11972;1 11974;		4
+	2613 3390 0	Skills Necklace (Fishing Guild)		1 11105;1 11107;1 11109;1 11111;1 11968;1 11970		4
+	3049 9762 0	Skills Necklace (Mining Guild)		1 11105;1 11107;1 11109;1 11111;1 11968;1 11970		4
+	2934 3294 0	Skills Necklace (Crafting Guild)		1 11105;1 11107;1 11109;1 11111;1 11968;1 11970		4
+	3145 3438 0	Skills Necklace (Cooking Guild)		1 11105;1 11107;1 11109;1 11111;1 11968;1 11970		4
+	1662 3505 0	Skills Necklace (Woodcutting Guild)		1 11105;1 11107;1 11109;1 11111;1 11968;1 11970		4
+	1249 3717 0	Skills Necklace (Farming Guild)		1 11105;1 11107;1 11109;1 11111;1 11968;1 11970		4
+	3087 3496 0	Amulet of Glory (Edgeville)		1 1706;1 1708;1 1710;1 1712;1 10354;1 10356;1 10358;1 10360;1 119641 11966;1 11976;1 11978;1 19707		4
+	2918 3176 0	Amulet of Glory (Karamja)		1 1706;1 1708;1 1710;1 1712;1 10354;1 10356;1 10358;1 10360;1 11964;1 11966;1 11976;1 11978;1 19707		4
+	3105 3251 0	Amulet of Glory (Draynor Village)		1 1706;1 1708;1 1710;1 1712;1 10354;1 10356;1 10358;1 10360;1 11964;1 11966;1 11976;1 11978;1 19707		4
+	3293 3163 0	Amulet of Glory (Al-Kharid)		1 1706;1 1708;1 1710;1 1712;1 10354;1 10356;1 10358;1 10360;1 11964;1 11966;1 11976;1 11978;1 19707		4
+	2535 3862 0	Ring of Wealth (Miscellania)		1 11980;1 11982;1 11984;1 11986;1 11988;1 20786;1 20787;1 20788;1 20789;1 20790		4
+	3162 3480 0	Ring of Wealth (Grand Exchange)		1 11980;1 11982;1 11984;1 11986;1 11988;1 20786;1 20787;1 20788;1 20789;1 20790		4
+	2995 3375 0	Ring of Wealth (Falador)		1 11980;1 11982;1 11984;1 11986;1 11988;1 20786;1 20787;1 20788;1 20789;1 20790		4
+	2831 10165 0	Ring of Wealth (Dondakan)		1 11980;1 11982;1 11984;1 11986;1 11988;1 20786;1 20787;1 20788;1 20789;1 20790		4

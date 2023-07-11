@@ -1,7 +1,7 @@
 package shortestpath;
 
-public enum ItemEquipStatus {
-    ANYWHERE,
+public enum ItemSearchLocation {
+    NONE,
     INVENTORY,
     BANK;
 }

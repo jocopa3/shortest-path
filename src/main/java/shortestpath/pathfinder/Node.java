@@ -10,11 +10,10 @@ public class Node {
     public final int packedPosition;
     public final Node previous;
     public final int cost;
+    public final int steps;
 
     public Node(WorldPoint position, Node previous, int wait) {
-        this.packedPosition = WorldPointUtil.packWorldPoint(position);
-        this.previous = previous;
-        this.cost = cost(previous, wait);
+        this(WorldPointUtil.packWorldPoint(position, prevous, wait));
     }
 
     public Node(WorldPoint position, Node previous) {
@@ -25,6 +24,12 @@ public class Node {
         this.packedPosition = packedPosition;
         this.previous = previous;
         this.cost = cost(previous, wait);
+
+        if (previous == null) {
+            steps = 0;
+        } else {
+            steps = previous.steps + 1;
+        }
     }
 
     public Node(int packedPosition, Node previous) {

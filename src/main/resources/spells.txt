@@ -1,0 +1,50 @@
+# Standard spellbook
+	3222 3218 0	Lumbridge Home	1 Magic Standard			4
+	3213 3424 0	Varrock	25 Magic Standard			4
+#	3164 3478 0	Varrock GE	25 Magic Standard			4	Requires medium Varrock diary
+	3222 3218 0	Lumbridge	31 Magic Standard			4
+	2965 3381 0	Falador	37 Magic Standard			4
+	2757 3477 0	Camelot	45 Magic Standard			4
+#	2726 3485 0	Camelot Bank	45 Magic Standard			4	Requires hard Kandarin diary
+	2664 3306 0	Ardougne	51 Magic Standard			4
+	2547 3114 0	Watchtower	58 Magic Standard			4
+#	2584 3097 0	Watchtower Yanille	58 Magic Standard			4	Requires hard Ardougne diary
+	2891 3678 0	Trollheim	61 Magic Standard			4
+	2796 2791 0	Ape Atoll	64 Magic Standard			4
+	1643 3672 0	Kourend	69 Magic Standard			4
+
+# Ancient Magicks
+	3087 3502 0	Edgeville Home	1 Magic Ancient		Desert Treasure I	4
+	3097 9880 0	Paddewwa	54 Magic Ancient		Desert Treasure I	4
+	3319 3336 0	Senntisten	60 Magic Ancient		Desert Treasure I	4
+	3494 3473 0	Kharyrll	66 Magic Ancient		Desert Treasure I	4
+	3002 3472 0	Lassar	72 Magic Ancient		Desert Treasure I	4
+	2969 3695 0	Dareeyak	78 Magic Ancient		Desert Treasure I	4
+	3157 3667 0	Carrallangar	84 Magic Ancient		Desert Treasure I	4
+	3288 3888 0	Annakarl	90 Magic Ancient		Desert Treasure I	4
+	2977 3872 0	Ghorrock	96 Magic Ancient		Desert Treasure I	4
+
+# Lunar spellbook
+	2113 3915 0	Lunar Home	1 Magic Lunar		Lunar Diplomacy	4
+	2113 3915 0	Moonclan	69 Magic Lunar		Lunar Diplomacy	4
+	2468 3246 0	Ourania	71 Magic Lunar		Lunar Diplomacy	4
+	2546 3755 0	Waterbirth	72 Magic Lunar		Lunar Diplomacy	4
+	2543 3568 0	Barbarian	75 Magic Lunar		Lunar Diplomacy	4
+	2636 3167 0	Khazard	78 Magic Lunar		Lunar Diplomacy	4
+	2612 3391 0	Fishing Guild	85 Magic Lunar		Lunar Diplomacy	4
+	2802 3449 0	Catherby	87 Magic Lunar		Lunar Diplomacy	4
+	2973 3939 0	Ice Plateau	89 Magic Lunar		Lunar Diplomacy	4
+
+# Arceuus spellbook
+	1700 3882 0	Arceuus Home	1 Magic Arceuus			4	Requires at least 60% Arceuus favor
+	1632 3838 0	Arceuus Library	6 Magic Arceuus			4	Requires at least 60% Arceuus favor
+	3108 3352 0	Draynor Manor	17 Magic Arceuus			4	Requires at least 60% Arceuus favor
+	1349 3739 0	Battlefront	23 Magic Arceuus			4	Requires at least 60% Arceuus favor
+	2979 3509 0	Mind Altar	28 Magic Arceuus			4	Requires at least 60% Arceuus favor
+	3433 3461 0	Salve Graveyard	40 Magic Arceuus			4	Requires at least 60% Arceuus favor
+	3548 3528 0	Fenkenstrain's Castle	48 Magic Arceuus			4	Requires at least 60% Arceuus favor
+	2500 3291 0	West Ardougne	61 Magic Arceuus			4	Requires at least 60% Arceuus favor
+	3797 2866 0	Harmony Island	65 Magic Arceuus			4	Requires at least 60% Arceuus favor
+	2978 3763 0	Cemetery	71 Magic Arceuus			4	Requires at least 60% Arceuus favor
+	3565 3315 0	Barrows	83 Magic Arceuus			4	Requires at least 60% Arceuus favor
+	2770 2703 0	Ape Atoll	90 Magic Arceuus			4	Requires at least 60% Arceuus favor
