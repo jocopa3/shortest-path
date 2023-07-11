@@ -15,6 +15,8 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
+
 import lombok.Getter;
 import net.runelite.api.Client;
 import net.runelite.api.KeyCode;
@@ -116,6 +118,7 @@ public class ShortestPathPlugin extends Plugin {
     @Getter
     private Pathfinder pathfinder;
     private PathfinderConfig pathfinderConfig;
+
     @Getter
     private boolean startPointSet = false;
 
@@ -127,9 +130,8 @@ public class ShortestPathPlugin extends Plugin {
     @Override
     protected void startUp() {
         CollisionMap map = CollisionMap.fromResources();
-        Map<WorldPoint, List<Transport>> transports = Transport.fromResources(config);
 
-        pathfinderConfig = new PathfinderConfig(map, transports, client, config, this);
+        pathfinderConfig = new PathfinderConfig(map, Transport.loadAllFromResources(), client, config, this);
 
         overlayManager.add(pathOverlay);
         overlayManager.add(pathMinimapOverlay);
@@ -145,18 +147,16 @@ public class ShortestPathPlugin extends Plugin {
         overlayManager.remove(pathMapTooltipOverlay);
     }
 
+    Pattern EVENT_KEYS = Pattern.compile("^(useAgilityShortcuts|useGrappleShortcuts|useBoats|useFairyRings|useTeleports|useSpiritTree|useItems|useSpells|itemsLocation)$");
     @Subscribe
     public void onConfigChanged(ConfigChanged event) {
         if (!CONFIG_GROUP.equals(event.getGroup())) {
             return;
         }
 
-        boolean reloadTransports = "useAgilityShortcuts".equals(event.getKey()) ||
-            "useGrappleShortcuts".equals(event.getKey()) || "useBoats".equals(event.getKey()) ||
-            "useFairyRings".equals(event.getKey()) || "useTeleports".equals(event.getKey());
-
-        if (reloadTransports) {
-            Map<WorldPoint, List<Transport>> transports = Transport.fromResources(config);
+        boolean reloadTransports = EVENT_KEYS.matcher(event.getKey()).find();
+        if (reloadTransports && pathfinderConfig.getTransports().size() == 0) {
+            Map<WorldPoint, List<Transport>> transports = Transport.loadAllFromResources();
             pathfinderConfig.getTransports().clear();
             pathfinderConfig.getTransports().putAll(transports);
         }

@@ -28,6 +28,8 @@ public class Pathfinder implements Runnable {
     @Getter
     private boolean done = false;
 
+    private int totalNodes = 0;
+
     public Pathfinder(PathfinderConfig config, WorldPoint start, WorldPoint target) {
         this.config = config;
         this.start = start;
@@ -39,6 +41,7 @@ public class Pathfinder implements Runnable {
 
     private void addNeighbors(Node node) {
         for (Node neighbor : config.getMap().getNeighbors(node, config)) {
+            ++totalNodes;
             if (config.avoidWilderness(node.position, neighbor.position, target)) {
                 continue;
             }
@@ -55,11 +58,13 @@ public class Pathfinder implements Runnable {
     @Override
     public void run() {
         boundary.addFirst(new Node(start, null));
+        totalNodes = 1;
 
         int bestDistance = Integer.MAX_VALUE;
         long bestHeuristic = Integer.MAX_VALUE;
         Instant cutoffTime = Instant.now().plus(config.getCalculationCutoff());
 
+        Instant startTime = Instant.now();
         while (!boundary.isEmpty() || !pending.isEmpty()) {
             Node node = boundary.peekFirst();
             Node p = pending.peek();
@@ -91,6 +96,8 @@ public class Pathfinder implements Runnable {
 
             addNeighbors(node);
         }
+        Instant endTime = Instant.now();
+        System.out.println("Time taken: " + ((endTime.toEpochMilli() - startTime.toEpochMilli()) / 1000.0) + "; Nodes: " + totalNodes);
 
         done = true;
         boundary.clear();

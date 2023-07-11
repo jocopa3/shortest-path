@@ -65,23 +65,3 @@
 3233 9313 0	3233 2887 0	Use Portal 6550				1
 3234 9312 0	3233 2887 0	Use Portal 6550				1
 3232 9312 0	3233 2887 0	Use Portal 6550				1
-2556 3259 0	2461 3444 0	Travel Spirit Tree 6550				1
-2556 3259 0	2542 3170 0	Travel Spirit Tree 6550				1
-2556 3259 0	3185 3508 0	Travel Spirit Tree 6550				1
-2556 3259 0	2488 2850 0	Travel Spirit Tree 6550				1
-2461 3444 0	2556 3259 0	Travel Spirit Tree 6550				1
-2461 3444 0	2542 3170 0	Travel Spirit Tree 6550				1
-2461 3444 0	3185 3508 0	Travel Spirit Tree 6550				1
-2461 3444 0	2488 2850 0	Travel Spirit Tree 6550				1
-2542 3170 0	2556 3259 0	Travel Spirit Tree 6550				1
-2542 3170 0	2461 3444 0	Travel Spirit Tree 6550				1
-2542 3170 0	3185 3508 0	Travel Spirit Tree 6550				1
-2542 3170 0	2488 2850 0	Travel Spirit Tree 6550				1
-3185 3508 0	2556 3259 0	Travel Spirit Tree 6550				1
-3185 3508 0	2461 3444 0	Travel Spirit Tree 6550				1
-3185 3508 0	2542 3170 0	Travel Spirit Tree 6550				1
-3185 3508 0	2488 2850 0	Travel Spirit Tree 6550				1
-2488 2850 0	2556 3259 0	Travel Spirit Tree 6550				1
-2488 2850 0	2461 3444 0	Travel Spirit Tree 6550				1
-2488 2850 0	2542 3170 0	Travel Spirit Tree 6550				1
-2488 2850 0	3185 3508 0	Travel Spirit Tree 6550				1

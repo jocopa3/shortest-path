@@ -17,6 +17,7 @@ import net.runelite.api.coords.WorldPoint;
  * This class represents a travel point between two WorldPoints.
  */
 public class Transport {
+
     /** The starting point of this transport */
     @Getter
     private final WorldPoint origin;
@@ -28,6 +29,9 @@ public class Transport {
     /** The skill levels required to use this transport */
     private final int[] skillLevels = new int[Skill.values().length];
 
+    @Getter
+    private ItemGroup[] requiredItems;
+
     /** The quest required to use this transport */
     @Getter
     private Quest quest;
@@ -36,13 +40,18 @@ public class Transport {
     @Getter
     private boolean isAgilityShortcut;
 
-    /** Whether the transport is a magic shortcut */
-    @Getter
-    private boolean isMagicShortcut;
 
     /** Whether the transport is a crossbow grapple shortcut */
     @Getter
     private boolean isGrappleShortcut;
+
+    /** Whether the transport is a magic shortcut */
+    @Getter
+    private boolean isSpell;
+
+    /** The spellbook required */
+    @Getter
+    private Spellbook requiredSpellbook;
 
     /** Whether the transport is a boat */
     @Getter
@@ -51,6 +60,10 @@ public class Transport {
     /** Whether the transport is a fairy ring */
     @Getter
     private boolean isFairyRing;
+
+    /** Whether the transport is a spirit tree */
+    @Getter
+    private boolean isSpiritTree;
 
     /** Whether the transport is a teleport */
     @Getter
@@ -64,14 +77,17 @@ public class Transport {
     @Getter
     private int wait;
 
+    public int used = 0;
+
     Transport(final WorldPoint origin, final WorldPoint destination) {
         this.origin = origin;
         this.destination = destination;
     }
 
-    Transport(final WorldPoint origin, final WorldPoint destination, final boolean isFairyRing) {
+    Transport(final WorldPoint origin, final WorldPoint destination, final TransportType transportType) {
         this(origin, destination);
-        this.isFairyRing = isFairyRing;
+        this.isFairyRing = TransportType.FAIRY_RING.equals(transportType);
+        this.isSpiritTree = TransportType.SPIRIT_TREE.equals(transportType);
     }
 
     Transport(final String line) {
@@ -95,6 +111,11 @@ public class Transport {
             Integer.parseInt(parts_destination[1]),
             Integer.parseInt(parts_destination[2]));
 
+        // Description
+//        if (parts.length >= 3 && !parts[2].isEmpty()) {
+//            // Handle description
+//        }
+
         // Skill requirements
         if (parts.length >= 4 && !parts[3].isEmpty()) {
             String[] skillRequirements = parts[3].split(";");
@@ -109,8 +130,33 @@ public class Transport {
                 for (int i = 0; i < skills.length; i++) {
                     if (skills[i].getName().equals(skillName)) {
                         skillLevels[i] = level;
+                        if (Skill.MAGIC.equals(skills[i])) {
+                            if (levelAndSkill.length < 3) {
+                                throw new IllegalArgumentException("Magic requires a spellbook; Line: " + line);
+                            }
+                            requiredSpellbook = Spellbook.fromName(levelAndSkill[2]);
+                            if (requiredSpellbook == null) {
+                                throw new IllegalArgumentException("Magic requires a spellbook; Line: " + line);
+                            }
+                        }
                         break;
                     }
+                }
+            }
+        }
+
+        // Item requirements
+        if (parts.length >= 5 && !parts[4].isEmpty()) {
+            String[] itemStrings = parts[4].split(";");
+            requiredItems = new ItemGroup[itemStrings.length];
+
+            for (int i = 0; i < itemStrings.length; ++i) {
+                try {
+                    requiredItems[i] = ItemGroup.fromString(itemStrings[i].trim());
+                } catch (Exception e) {
+                    System.err.println("Bad String: " + itemStrings[i]);
+                    System.err.println("Bad Line: " + line);
+                    e.printStackTrace();
                 }
             }
         }
@@ -125,9 +171,11 @@ public class Transport {
             this.wait = Integer.parseInt(parts[6]);
         }
 
-        isMagicShortcut = getRequiredLevel(Skill.MAGIC) > 1;
-        isAgilityShortcut = getRequiredLevel(Skill.AGILITY) > 1;
-        isGrappleShortcut = isAgilityShortcut && (getRequiredLevel(Skill.RANGED) > 1 || getRequiredLevel(Skill.STRENGTH) > 1);
+        // parts[7] = Additional comments?
+
+        isSpell = getRequiredLevel(Skill.MAGIC) >= 1;
+        isAgilityShortcut = getRequiredLevel(Skill.AGILITY) >= 1;
+        isGrappleShortcut = isAgilityShortcut && (getRequiredLevel(Skill.RANGED) >= 1 || getRequiredLevel(Skill.STRENGTH) >= 1);
     }
 
     /** The skill level required to use this transport */
@@ -149,12 +197,39 @@ public class Transport {
         return null;
     }
 
-    private static void addTransports(Map<WorldPoint, List<Transport>> transports, ShortestPathConfig config, String path, TransportType transportType) {
+    private static void addMultiDirectionalTransports(Map<WorldPoint, List<Transport>> transports, List<WorldPoint> points, List<String> questNames, TransportType transportType, int wait) {
+        for (WorldPoint origin : points) {
+            for (int i = 0; i < points.size(); i++) {
+                WorldPoint destination = points.get(i);
+                if (origin.equals(destination)) {
+                    continue;
+                }
+
+                Transport transport = new Transport(origin, destination, transportType);
+                transport.wait = wait;
+
+                if (questNames != null && questNames.size() == points.size()) {
+                    String questName = questNames.get(i);
+                    if (!Strings.isNullOrEmpty(questName)) {
+                        transport.quest = findQuest(questName);
+                    }
+                }
+
+                transports.computeIfAbsent(origin, k -> new ArrayList<>()).add(transport);
+            }
+        }
+    }
+
+    public static void addTransports(Map<WorldPoint, List<Transport>> transports, String path, TransportType transportType) {
         try {
             String s = new String(Util.readAllBytes(ShortestPathPlugin.class.getResourceAsStream(path)), StandardCharsets.UTF_8);
             Scanner scanner = new Scanner(s);
+
             List<WorldPoint> fairyRings = new ArrayList<>();
             List<String> fairyRingsQuestNames = new ArrayList<>();
+            List<WorldPoint> spiritTrees = new ArrayList<>();
+            List<String> spiritTreesQuestNames = new ArrayList<>();
+
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
 
@@ -162,44 +237,32 @@ public class Transport {
                     continue;
                 }
 
-                if (TransportType.FAIRY_RING.equals(transportType)) {
-                    String[] p = line.split("\t");
-                    fairyRings.add(new WorldPoint(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2])));
-                    fairyRingsQuestNames.add(p.length >= 7 ? p[6] : "");
-                } else {
-                    Transport transport = new Transport(line);
-                    transport.isBoat = TransportType.BOAT.equals(transportType);
-                    transport.isTeleport = TransportType.TELEPORT.equals(transportType);
-                    transport.isOneWay = TransportType.ONE_WAY.equals(transportType);
-                    if (!config.useAgilityShortcuts() && transport.isAgilityShortcut) {
-                        continue;
-                    }
-                    if (!config.useGrappleShortcuts() && transport.isGrappleShortcut) {
-                        continue;
-                    }
-                    if (!config.useItemsAndSpells() && transport.isOneWay) {
-                        continue;
-                    }
-                    WorldPoint origin = transport.getOrigin();
-                    transports.computeIfAbsent(origin, k -> new ArrayList<>()).add(transport);
+                switch (transportType) {
+                    case FAIRY_RING: {
+                            String[] p = line.split("\t");
+                            fairyRings.add(new WorldPoint(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2])));
+                            fairyRingsQuestNames.add(p.length >= 7 ? p[6] : "");
+                        }
+                        break;
+                    case SPIRIT_TREE: {
+                            String[] p = line.split("\t");
+                            spiritTrees.add(new WorldPoint(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2])));
+                            spiritTreesQuestNames.add(p.length >= 7 ? p[6] : "");
+                        }
+                        break;
+                    default:
+                        Transport transport = new Transport(line);
+                        transport.isBoat = TransportType.BOAT.equals(transportType);
+                        transport.isTeleport = TransportType.TELEPORT.equals(transportType);
+                        transport.isOneWay = TransportType.ONE_WAY.equals(transportType);
+                        WorldPoint origin = transport.getOrigin();
+                        transports.computeIfAbsent(origin, k -> new ArrayList<>()).add(transport);
+                        break;
                 }
             }
 
-            for (WorldPoint origin : fairyRings) {
-                for (int i = 0; i < fairyRings.size(); i++) {
-                    WorldPoint destination = fairyRings.get(i);
-                    String questName = fairyRingsQuestNames.get(i);
-                    if (origin.equals(destination)) {
-                        continue;
-                    }
-                    Transport transport = new Transport(origin, destination, true);
-                    transport.wait = 5;
-                    transports.computeIfAbsent(origin, k -> new ArrayList<>()).add(transport);
-                    if (!Strings.isNullOrEmpty(questName)) {
-                        transport.quest = findQuest(questName);
-                    }
-                }
-            }
+            addMultiDirectionalTransports(transports, fairyRings, fairyRingsQuestNames, TransportType.FAIRY_RING, 5);
+            addMultiDirectionalTransports(transports, spiritTrees, spiritTreesQuestNames, TransportType.SPIRIT_TREE, 5); // Not sure what wait is for spirit trees
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -208,36 +271,55 @@ public class Transport {
     public static HashMap<WorldPoint, List<Transport>> fromResources(ShortestPathConfig config) {
         HashMap<WorldPoint, List<Transport>> transports = new HashMap<>();
 
-        addTransports(transports, config, "/transports.txt", TransportType.TRANSPORT);
+        addTransports(transports, "/transports.txt", TransportType.TRANSPORT);
 
         if (config.useBoats()) {
-            addTransports(transports, config, "/boats.txt", TransportType.BOAT);
+            addTransports(transports, "/boats.txt", TransportType.BOAT);
         }
 
         if (config.useFairyRings()) {
-            addTransports(transports, config, "/fairy_rings.txt", TransportType.FAIRY_RING);
+            addTransports(transports, "/fairy_rings.txt", TransportType.FAIRY_RING);
         }
 
         if (config.useTeleports()) {
-            addTransports(transports, config, "/teleports.txt", TransportType.TELEPORT);
+            addTransports(transports, "/teleports.txt", TransportType.TELEPORT);
         }
 
         if (config.useItems()) {
-            addTransports(transports, config, "/items.txt", TransportType.ONE_WAY);
+            addTransports(transports, "/items.txt", TransportType.ONE_WAY);
         }
 
         if (config.useSpells()) {
-            addTransports(transports, config, "/spells.txt", TransportType.ONE_WAY);
+            addTransports(transports, "/spells.txt", TransportType.ONE_WAY);
+        }
+
+        if (config.useSpiritTree()) {
+            addTransports(transports, "/spirit_trees.txt", TransportType.SPIRIT_TREE);
         }
 
         return transports;
     }
 
-    private enum TransportType {
+    public static HashMap<WorldPoint, List<Transport>> loadAllFromResources() {
+        HashMap<WorldPoint, List<Transport>> transports = new HashMap<>();
+
+        addTransports(transports, "/transports.txt", TransportType.TRANSPORT);
+        addTransports(transports, "/boats.txt", TransportType.BOAT);
+        addTransports(transports, "/fairy_rings.txt", TransportType.FAIRY_RING);
+        addTransports(transports, "/teleports.txt", TransportType.TELEPORT);
+        addTransports(transports, "/items.txt", TransportType.ONE_WAY);
+        addTransports(transports, "/spells.txt", TransportType.ONE_WAY);
+        addTransports(transports, "/spirit_trees.txt", TransportType.SPIRIT_TREE);
+
+        return transports;
+    }
+
+    public static enum TransportType {
         TRANSPORT,
         BOAT,
         FAIRY_RING,
         TELEPORT,
-        ONE_WAY
+        ONE_WAY,
+        SPIRIT_TREE
     }
 }

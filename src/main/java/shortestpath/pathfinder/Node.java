@@ -9,11 +9,18 @@ public class Node {
     public final WorldPoint position;
     public final Node previous;
     public final int cost;
+    public final int steps;
 
     public Node(WorldPoint position, Node previous, int wait) {
         this.position = position;
         this.previous = previous;
         this.cost = cost(previous, position, wait);
+
+        if (previous == null) {
+            steps = 0;
+        } else {
+            steps = previous.steps + 1;
+        }
     }
 
     public Node(WorldPoint position, Node previous) {

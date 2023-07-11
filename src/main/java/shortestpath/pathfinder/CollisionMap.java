@@ -66,18 +66,14 @@ public class CollisionMap extends SplitFlagMap {
         List<Transport> transports = config.getTransports().get(node.position);
         if (transports != null) {
             for (Transport transport : transports) {
-                if (config.useTransport(transport)) {
-                    neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait()));
-                    isFairyRing |= transport.isFairyRing();
-                }
+                neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait(), transport));
+                isFairyRing |= transport.isFairyRing();
             }
         }
 
         if (node.isRootNode()) {
             for (Transport transport : config.getTransports().getOrDefault(null, new ArrayList<>())) {
-                if (config.useTransport(transport)) {
-                    neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait()));
-                }
+                neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait(), transport));
             }
         }
 

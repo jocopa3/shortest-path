@@ -1,2 +1,4 @@
-package shortestpath;public class TransportRequirements {
+package shortestpath;
+
+public class TransportRequirements {
 }
