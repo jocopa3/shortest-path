@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+
+import net.runelite.api.coords.WorldPoint;
 import shortestpath.ShortestPathPlugin;
 import shortestpath.Transport;
 import shortestpath.Util;
@@ -60,9 +62,14 @@ public class CollisionMap extends SplitFlagMap {
 
         List<Node> neighbors = new ArrayList<>();
 
-        for (Transport transport : config.getTransports().getOrDefault(node.position, new ArrayList<>())) {
-            if (config.useTransport(transport)) {
-                neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait()));
+        boolean isFairyRing = false;
+        List<Transport> transports = config.getTransports().get(node.position);
+        if (transports != null) {
+            for (Transport transport : transports) {
+                if (config.useTransport(transport)) {
+                    neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait()));
+                    isFairyRing |= transport.isFairyRing();
+                }
             }
         }
 
@@ -75,7 +82,7 @@ public class CollisionMap extends SplitFlagMap {
         }
 
         boolean[] traversable;
-        if (isBlocked(x, y, z)) {
+        if (isBlocked(x, y, z) && isFairyRing) {
             boolean westBlocked = isBlocked(x - 1, y, z);
             boolean eastBlocked = isBlocked(x + 1, y, z);
             boolean southBlocked = isBlocked(x, y - 1, z);
@@ -103,9 +110,11 @@ public class CollisionMap extends SplitFlagMap {
         for (int i = 0; i < traversable.length; i++) {
             OrdinalDirection d = OrdinalDirection.values()[i];
             if (traversable[i]) {
-                neighbors.add(new Node(node.position.dx(d.x).dy(d.y), node));
+                neighbors.add(new Node(d.translatePoint(node.position), node));
             } else if (Math.abs(d.x + d.y) == 1 && isBlocked(x + d.x, y + d.y, z)) {
-                for (Transport transport : config.getTransports().getOrDefault(node.position.dx(d.x).dy(d.y), new ArrayList<>())) {
+                transports = config.getTransports().get(d.translatePoint(node.position));
+                if (transports == null) continue;
+                for (Transport transport : transports) {
                     neighbors.add(new Node(transport.getOrigin(), node));
                 }
             }
