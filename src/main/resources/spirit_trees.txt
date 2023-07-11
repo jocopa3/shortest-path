@@ -1,0 +1,6 @@
+# X	Y	Z	Name	Skill requirements	Item requirements	Quest
+2556 3259 0	Travel Spirit Tree 6550				1
+2461 3444 0	Travel Spirit Tree 6550				1
+2542 3170 0	Travel Spirit Tree 6550				1
+3185 3508 0	Travel Spirit Tree 6550				1
+2488 2850 0	Travel Spirit Tree 6550				1

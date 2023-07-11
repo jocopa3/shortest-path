@@ -1,5 +1,7 @@
 package shortestpath.pathfinder;
 
+import net.runelite.api.coords.WorldPoint;
+
 public enum OrdinalDirection {
     WEST(-1, 0),
     EAST(1, 0),
@@ -16,5 +18,9 @@ public enum OrdinalDirection {
     OrdinalDirection(int x, int y) {
         this.x = x;
         this.y = y;
+    }
+
+    public WorldPoint translatePoint(WorldPoint origin) {
+        return new WorldPoint(origin.getX() + x, origin.getY() + y, origin.getPlane());
     }
 }
