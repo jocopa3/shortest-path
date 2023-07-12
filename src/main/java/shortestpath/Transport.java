@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import lombok.Getter;
+import net.runelite.api.ItemID;
 import net.runelite.api.Quest;
 import net.runelite.api.Skill;
 import net.runelite.api.coords.WorldPoint;
@@ -211,6 +212,19 @@ public class Transport {
         return null;
     }
 
+    public int getItemCost(int itemId) {
+        if (requiredItems == null) {
+            return 0;
+        }
+
+        int maxGP = 0;
+        for (ItemGroup items : requiredItems) {
+            maxGP = Math.max(maxGP, items.getItemCount(itemId));
+        }
+
+        return maxGP;
+    }
+
     private static class MultiDirectionalTransport {
         final WorldPoint point;
         final String questName;
@@ -324,7 +338,7 @@ public class Transport {
         return transports;
     }
 
-    public static enum TransportType {
+    public enum TransportType {
         TRANSPORT,
         BOAT,
         FAIRY_RING,

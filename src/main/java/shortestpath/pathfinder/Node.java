@@ -10,6 +10,7 @@ public class Node {
     public final int packedPosition;
     public final Node previous;
     public final int cost;
+    public int gp;
     public final int steps;
 
     public Node(WorldPoint position, Node previous, int wait) {
@@ -26,8 +27,10 @@ public class Node {
         this.cost = cost(previous, wait);
 
         if (previous == null) {
+            gp = 0;
             steps = 0;
         } else {
+            gp = previous.gp;
             steps = previous.steps + 1;
         }
     }

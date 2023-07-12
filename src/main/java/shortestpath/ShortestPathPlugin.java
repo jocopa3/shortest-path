@@ -164,7 +164,7 @@ public class ShortestPathPlugin extends Plugin {
         });
     }
     
-    Pattern EVENT_KEYS = Pattern.compile("^(useAgilityShortcuts|useGrappleShortcuts|useBoats|useFairyRings|useTeleports|useSpiritTree|useGnomeGlider|useItems|useSpells|itemsLocation)$");
+    Pattern EVENT_KEYS = Pattern.compile("^(useAgilityShortcuts|useGrappleShortcuts|useBoats|useFairyRings|useTeleports|useSpiritTree|useGnomeGlider|useItems|useSpells|itemsLocation|useGP|gpCost)$");
     @Subscribe
     public void onConfigChanged(ConfigChanged event) {
         if (!CONFIG_GROUP.equals(event.getGroup())) {

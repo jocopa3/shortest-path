@@ -58,6 +58,8 @@ public class PathfinderConfig {
     private int recalculateDistance;
     private ItemSearchLocation itemSearchLocation;
     private ItemGroup items;
+    @Getter
+    private int gp = Integer.MAX_VALUE; // Assume player is loaded unless otherwise specified
 
     private Map<Quest, QuestState> questStates = new HashMap<>();
 
@@ -105,8 +107,6 @@ public class PathfinderConfig {
 
             refreshTransportData();
         }
-
-        refreshTransports();
     }
 
     private void refreshTransportData() {
@@ -129,6 +129,11 @@ public class PathfinderConfig {
         }
 
         items = ItemGroup.fromItemContainers(containers);
+        if (config.useGP()) {
+            gp = Math.min(items.getItemCount(ItemID.COINS_995), config.gpCost());
+        } else {
+            gp = 0;
+        }
 
         transports.clear();
         for (Map.Entry<WorldPoint, List<Transport>> entry : allTransports.entrySet()) {

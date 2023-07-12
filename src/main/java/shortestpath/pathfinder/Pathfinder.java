@@ -128,6 +128,9 @@ public class Pathfinder implements Runnable {
             }
 
             node = boundary.removeFirst();
+            if (config.getGp() < node.gp) {
+                continue; // TODO: generalize heuristic check?
+            }
 
             if (node.packedPosition == targetPacked || !config.isNear(start)) {
                 bestLastNode = node;
