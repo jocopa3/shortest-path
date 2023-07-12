@@ -11,6 +11,7 @@ import java.util.Queue;
 import java.util.Set;
 import lombok.Getter;
 import net.runelite.api.coords.WorldPoint;
+import shortestpath.Transport;
 
 public class Pathfinder implements Runnable {
     @Getter
@@ -23,8 +24,8 @@ public class Pathfinder implements Runnable {
     private final Set<WorldPoint> visited = new HashSet<>();
     private final Queue<Node> pending = new PriorityQueue<>();
 
-    @Getter
-    private List<WorldPoint> path = new ArrayList<>();
+    private Node lastNode;
+
     @Getter
     private boolean done = false;
 
@@ -55,9 +56,14 @@ public class Pathfinder implements Runnable {
         }
     }
 
+    public List<WorldPoint> getPath() {
+        return lastNode.getPathPoints();
+    }
+
     @Override
     public void run() {
-        boundary.addFirst(new Node(start, null));
+        lastNode = new Node(start, null);
+        boundary.addFirst(lastNode);
         totalNodes = 1;
 
         int bestDistance = Integer.MAX_VALUE;
@@ -77,14 +83,14 @@ public class Pathfinder implements Runnable {
             node = boundary.removeFirst();
 
             if (node.position.equals(target) || !config.isNear(start)) {
-                path = node.getPath();
+                lastNode = node;
                 break;
             }
 
             int distance = Node.distanceBetween(node.position, target);
             long heuristic = distance + Node.distanceBetween(node.position, target, 2);
             if (heuristic < bestHeuristic || (heuristic <= bestHeuristic && distance < bestDistance)) {
-                path = node.getPath();
+                lastNode = node;
                 bestDistance = distance;
                 bestHeuristic = heuristic;
                 cutoffTime = Instant.now().plus(config.getCalculationCutoff());
@@ -98,7 +104,13 @@ public class Pathfinder implements Runnable {
         }
         Instant endTime = Instant.now();
         System.out.println("Time taken: " + ((endTime.toEpochMilli() - startTime.toEpochMilli()) / 1000.0) + "; Nodes: " + totalNodes);
-
+        List<Node> nodes = lastNode.getPathNodes();
+        int step = 0;
+        for (Node n : nodes) {
+            if (n instanceof TransportNode) {
+                System.out.println((++step) + ": " + ((TransportNode)n).getTransport().getDescription());
+            }
+        }
         done = true;
         boundary.clear();
         visited.clear();

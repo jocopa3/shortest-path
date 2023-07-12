@@ -147,7 +147,7 @@ public class ShortestPathPlugin extends Plugin {
         overlayManager.remove(pathMapTooltipOverlay);
     }
 
-    Pattern EVENT_KEYS = Pattern.compile("^(useAgilityShortcuts|useGrappleShortcuts|useBoats|useFairyRings|useTeleports|useSpiritTree|useItems|useSpells|itemsLocation)$");
+    Pattern EVENT_KEYS = Pattern.compile("^(useAgilityShortcuts|useGrappleShortcuts|useBoats|useFairyRings|useTeleports|useSpiritTree|useGnomeGlider|useItems|useSpells|itemsLocation)$");
     @Subscribe
     public void onConfigChanged(ConfigChanged event) {
         if (!CONFIG_GROUP.equals(event.getGroup())) {

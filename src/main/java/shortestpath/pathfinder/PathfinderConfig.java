@@ -36,6 +36,7 @@ public class PathfinderConfig {
     private boolean useBoats;
     private boolean useFairyRings;
     private boolean useSpiritTree;
+    private boolean useGnomeGliders;
     private boolean useTeleports;
     private boolean useItems;
     private boolean useSpells;
@@ -70,6 +71,8 @@ public class PathfinderConfig {
         useBoats = config.useBoats();
         useFairyRings = config.useFairyRings();
         useSpiritTree = config.useSpiritTree();
+        useGnomeGliders = config.useGnomeGlider();
+        System.out.println("config.useGnomeGlider() = " + config.useGnomeGlider());
         useTeleports = config.useTeleports();
         useItems = config.useItems();
         useSpells = config.useSpells();
@@ -84,7 +87,8 @@ public class PathfinderConfig {
             prayerLevel = client.getBoostedSkillLevel(Skill.PRAYER);
             woodcuttingLevel = client.getBoostedSkillLevel(Skill.WOODCUTTING);
             //wildernessLevel = client.getWidget(WidgetInfo.PVP_WILDERNESS_LEVEL).getText();
-            plugin.getClientThread().invokeLater(this::refreshQuests);
+            //plugin.getClientThread().invokeLater(this::refreshQuests);
+            refreshQuests(); // TODO: is this safe? Why was invokeLater used?
 
             List<ItemContainer> containers = new ArrayList<>(3);
             switch (itemSearchLocation) {
@@ -105,7 +109,10 @@ public class PathfinderConfig {
 
     private void refreshQuests() {
         useFairyRings &= !QuestState.NOT_STARTED.equals(Quest.FAIRYTALE_II__CURE_A_QUEEN.getState(client));
-        for (Map.Entry<WorldPoint, List<Transport>> entry : transports.entrySet()) {
+        useSpiritTree &= QuestState.FINISHED.equals(Quest.TREE_GNOME_VILLAGE.getState(client));
+        useGnomeGliders &= QuestState.FINISHED.equals(Quest.THE_GRAND_TREE.getState(client));
+
+        for (Map.Entry<WorldPoint, List<Transport>> entry : allTransports.entrySet()) {
             for (Transport transport : entry.getValue()) {
                 if (transport.isQuestLocked()) {
                     try {
@@ -164,6 +171,7 @@ public class PathfinderConfig {
         final boolean isBoat = transport.isBoat();
         final boolean isFairyRing = transport.isFairyRing();
         final boolean isSpiritTree = transport.isSpiritTree();
+        final boolean isGnomeGlider = transport.isGnomeGlider();
         final boolean isTeleport = transport.isTeleport();
         final boolean isCanoe = isBoat && transportWoodcuttingLevel > 1;
         final boolean isPrayerLocked = transportPrayerLevel > 1;
@@ -199,6 +207,10 @@ public class PathfinderConfig {
             return false;
         }
 
+        if (isGnomeGlider && !useGnomeGliders) {
+            return false;
+        }
+
         if (isTeleport && !useTeleports) {
             return false;
         }
@@ -207,11 +219,11 @@ public class PathfinderConfig {
             return false;
         }
 
-        if (isQuestLocked && !QuestState.FINISHED.equals(questStates.getOrDefault(transport.getQuest(), QuestState.NOT_STARTED))) {
+        if (isSpell && (!useSpells || magicLevel < transportMagicLevel || !spellbook.equals(transportSpellbook))) {
             return false;
         }
 
-        if (isSpell && (!useSpells || magicLevel < transportMagicLevel || !spellbook.equals(transportSpellbook))) {
+        if (isQuestLocked && !QuestState.FINISHED.equals(questStates.getOrDefault(transport.getQuest(), QuestState.NOT_STARTED))) {
             return false;
         }
 

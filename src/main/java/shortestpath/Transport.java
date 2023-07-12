@@ -65,6 +65,10 @@ public class Transport {
     @Getter
     private boolean isSpiritTree;
 
+    /** Whether the transport is a gnome glider */
+    @Getter
+    private boolean isGnomeGlider;
+
     /** Whether the transport is a teleport */
     @Getter
     private boolean isTeleport;
@@ -77,7 +81,9 @@ public class Transport {
     @Getter
     private int wait;
 
-    public int used = 0;
+    /** Description of the transport method */
+    @Getter
+    private String description;
 
     Transport(final WorldPoint origin, final WorldPoint destination) {
         this.origin = origin;
@@ -86,8 +92,18 @@ public class Transport {
 
     Transport(final WorldPoint origin, final WorldPoint destination, final TransportType transportType) {
         this(origin, destination);
-        this.isFairyRing = TransportType.FAIRY_RING.equals(transportType);
-        this.isSpiritTree = TransportType.SPIRIT_TREE.equals(transportType);
+
+        switch (transportType) {
+            case FAIRY_RING:
+                this.isFairyRing = true;
+                break;
+            case SPIRIT_TREE:
+                this.isSpiritTree = true;
+                break;
+            case GNOME_GLIDER:
+                this.isGnomeGlider = true;
+                break;
+        }
     }
 
     Transport(final String line) {
@@ -112,9 +128,11 @@ public class Transport {
             Integer.parseInt(parts_destination[2]));
 
         // Description
-//        if (parts.length >= 3 && !parts[2].isEmpty()) {
-//            // Handle description
-//        }
+        if (parts.length >= 3 && !parts[2].isEmpty()) {
+             description = parts[2];
+        } else {
+            description = "";
+        }
 
         // Skill requirements
         if (parts.length >= 4 && !parts[3].isEmpty()) {
@@ -131,12 +149,8 @@ public class Transport {
                     if (skills[i].getName().equals(skillName)) {
                         skillLevels[i] = level;
                         if (Skill.MAGIC.equals(skills[i])) {
-                            if (levelAndSkill.length < 3) {
-                                throw new IllegalArgumentException("Magic requires a spellbook; Line: " + line);
-                            }
-                            requiredSpellbook = Spellbook.fromName(levelAndSkill[2]);
-                            if (requiredSpellbook == null) {
-                                throw new IllegalArgumentException("Magic requires a spellbook; Line: " + line);
+                            if (levelAndSkill.length < 3 || (requiredSpellbook = Spellbook.fromName(levelAndSkill[2])) == null) {
+                                throw new IllegalArgumentException("Magic requires a spellbook; valid spellbooks are: " + Spellbook.SPELLBOOK_NAMES + "\nLine: " + line);
                             }
                         }
                         break;
@@ -197,25 +211,43 @@ public class Transport {
         return null;
     }
 
-    private static void addMultiDirectionalTransports(Map<WorldPoint, List<Transport>> transports, List<WorldPoint> points, List<String> questNames, TransportType transportType, int wait) {
-        for (WorldPoint origin : points) {
+    private static class MultiDirectionalTransport {
+        final WorldPoint point;
+        final String questName;
+        final String description;
+        final boolean oneWay;
+
+        MultiDirectionalTransport(WorldPoint point, String questName, String description) {
+            this(point, questName, description, false);
+        }
+
+        MultiDirectionalTransport(WorldPoint point, String questName, String description, boolean oneWay) {
+            this.point = point;
+            this.questName = questName;
+            this.description = description;
+            this.oneWay = oneWay;
+        }
+    }
+
+    private static void addMultiDirectionalTransports(Map<WorldPoint, List<Transport>> transports, List<MultiDirectionalTransport> points, TransportType transportType, int wait) {
+        for (MultiDirectionalTransport origin : points) {
+            if (origin.oneWay) continue;
+
             for (int i = 0; i < points.size(); i++) {
-                WorldPoint destination = points.get(i);
-                if (origin.equals(destination)) {
+                MultiDirectionalTransport destination = points.get(i);
+                if (origin.point.equals(destination.point)) {
                     continue;
                 }
 
-                Transport transport = new Transport(origin, destination, transportType);
+                Transport transport = new Transport(origin.point, destination.point, transportType);
+                transport.description = destination.description.replaceFirst(" \\d*?$", ""); // Remove last digits;
                 transport.wait = wait;
 
-                if (questNames != null && questNames.size() == points.size()) {
-                    String questName = questNames.get(i);
-                    if (!Strings.isNullOrEmpty(questName)) {
-                        transport.quest = findQuest(questName);
-                    }
+                if (!Strings.isNullOrEmpty(destination.questName)) {
+                    transport.quest = findQuest(destination.questName);
                 }
 
-                transports.computeIfAbsent(origin, k -> new ArrayList<>()).add(transport);
+                transports.computeIfAbsent(origin.point, k -> new ArrayList<>()).add(transport);
             }
         }
     }
@@ -225,10 +257,9 @@ public class Transport {
             String s = new String(Util.readAllBytes(ShortestPathPlugin.class.getResourceAsStream(path)), StandardCharsets.UTF_8);
             Scanner scanner = new Scanner(s);
 
-            List<WorldPoint> fairyRings = new ArrayList<>();
-            List<String> fairyRingsQuestNames = new ArrayList<>();
-            List<WorldPoint> spiritTrees = new ArrayList<>();
-            List<String> spiritTreesQuestNames = new ArrayList<>();
+            List<MultiDirectionalTransport> fairyRings = new ArrayList<>();
+            List<MultiDirectionalTransport> spiritTrees = new ArrayList<>();
+            List<MultiDirectionalTransport> gnomeGliders = new ArrayList<>();
 
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
@@ -240,14 +271,23 @@ public class Transport {
                 switch (transportType) {
                     case FAIRY_RING: {
                             String[] p = line.split("\t");
-                            fairyRings.add(new WorldPoint(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2])));
-                            fairyRingsQuestNames.add(p.length >= 7 ? p[6] : "");
+                            WorldPoint point = new WorldPoint(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
+                            MultiDirectionalTransport ring = new MultiDirectionalTransport(point, p.length >= 7 ? "Fairy Ring (" + p[6] + ")" : "", p.length >= 4 ? p[3] : "");
+                            fairyRings.add(ring);
                         }
                         break;
                     case SPIRIT_TREE: {
                             String[] p = line.split("\t");
-                            spiritTrees.add(new WorldPoint(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2])));
-                            spiritTreesQuestNames.add(p.length >= 7 ? p[6] : "");
+                            WorldPoint point = new WorldPoint(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
+                            MultiDirectionalTransport tree = new MultiDirectionalTransport(point, p.length >= 7 ? p[6] : "", p.length >= 4 ? p[3] : "");
+                            spiritTrees.add(tree);
+                        }
+                        break;
+                    case GNOME_GLIDER: {
+                            String[] p = line.split("\t");
+                            WorldPoint point = new WorldPoint(Integer.parseInt(p[0]), Integer.parseInt(p[1]), Integer.parseInt(p[2]));
+                            MultiDirectionalTransport glider = new MultiDirectionalTransport(point, p.length >= 7 ? p[6] : "", p.length >= 4 ? p[3] : "", p.length >= 9);
+                            gnomeGliders.add(glider);
                         }
                         break;
                     default:
@@ -261,8 +301,9 @@ public class Transport {
                 }
             }
 
-            addMultiDirectionalTransports(transports, fairyRings, fairyRingsQuestNames, TransportType.FAIRY_RING, 5);
-            addMultiDirectionalTransports(transports, spiritTrees, spiritTreesQuestNames, TransportType.SPIRIT_TREE, 5); // Not sure what wait is for spirit trees
+            addMultiDirectionalTransports(transports, fairyRings, TransportType.FAIRY_RING, 5);
+            addMultiDirectionalTransports(transports, spiritTrees, TransportType.SPIRIT_TREE, 5); // Not sure what wait is for spirit trees
+            addMultiDirectionalTransports(transports, gnomeGliders, TransportType.GNOME_GLIDER, 5); // Not sure what wait is for gnome glider
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -297,6 +338,10 @@ public class Transport {
             addTransports(transports, "/spirit_trees.txt", TransportType.SPIRIT_TREE);
         }
 
+        if (config.useGnomeGlider()) {
+            addTransports(transports, "/gnome_glider.txt", TransportType.GNOME_GLIDER);
+        }
+
         return transports;
     }
 
@@ -310,6 +355,7 @@ public class Transport {
         addTransports(transports, "/items.txt", TransportType.ONE_WAY);
         addTransports(transports, "/spells.txt", TransportType.ONE_WAY);
         addTransports(transports, "/spirit_trees.txt", TransportType.SPIRIT_TREE);
+        addTransports(transports, "/gnome_glider.txt", TransportType.GNOME_GLIDER);
 
         return transports;
     }
@@ -320,6 +366,7 @@ public class Transport {
         FAIRY_RING,
         TELEPORT,
         ONE_WAY,
-        SPIRIT_TREE
+        SPIRIT_TREE,
+        GNOME_GLIDER
     }
 }
