@@ -1,0 +1,8 @@
+# X	Y	Z	Name	Skill requirements	Item requirements	Quest
+2465	3500	3	Glider (Ta Quir Priw)			The Grand Tree	4
+2850	3497	0	Glider (Sindarpos)			The Grand Tree	4
+3320	3429	0	Glider (Lemanto Andra)			The Grand Tree	4	Crashed
+3284	3211	0	Glider (Kar-Hewo)			The Grand Tree	4
+2541	2971	0	Glider (Lemantolly Undri)			One Small Favour	4
+2714	2803	0	Glider (Ookookolly Undri)			Monkey Madness II	4
+2971	2970	0	Glider (Gandius)			The Grand Tree	4

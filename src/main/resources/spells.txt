@@ -3,7 +3,7 @@
 	3213 3424 0	Varrock	25 Magic Standard			4
 #	3164 3478 0	Varrock GE	25 Magic Standard			4	Requires medium Varrock diary
 	3222 3218 0	Lumbridge	31 Magic Standard			4
-	2965 3381 0	Falador	37 Magic Standard			4
+	2965 3382 0	Falador	37 Magic Standard			4
 	2757 3477 0	Camelot	45 Magic Standard			4
 #	2726 3485 0	Camelot Bank	45 Magic Standard			4	Requires hard Kandarin diary
 	2664 3306 0	Ardougne	51 Magic Standard			4

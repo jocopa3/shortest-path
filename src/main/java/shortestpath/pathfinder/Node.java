@@ -40,7 +40,7 @@ public class Node {
         return previous == null;
     }
 
-    public List<WorldPoint> getPath() {
+    public List<WorldPoint> getPathPoints() {
         List<WorldPoint> path = new LinkedList<>();
         Node node = this;
 
@@ -59,6 +59,18 @@ public class Node {
 
         while (node != null) {
             path.add(0, node.packedPosition);
+            node = node.previous;
+        }
+
+        return new ArrayList<>(path);
+    }
+
+    public List<Node> getPathNodes() {
+        List<Node> path = new LinkedList<>();
+        Node node = this;
+
+        while (node != null) {
+            path.add(0, node);
             node = node.previous;
         }
 

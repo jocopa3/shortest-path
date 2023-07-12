@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.Getter;
 import net.runelite.api.coords.WorldPoint;
 import shortestpath.WorldPointUtil;
+import shortestpath.Transport;
 
 public class Pathfinder implements Runnable {
     private AtomicBoolean done = new AtomicBoolean();
@@ -90,9 +91,27 @@ public class Pathfinder implements Runnable {
         }
     }
 
+    public List<WorldPoint> getPath() {
+        if (path.isEmpty()) {
+            path = lastNode.getPathNodes();
+        }
+        return path;
+    }
+
+    public void printWaypoints() {
+        List<Node> nodes = lastNode.getPathNodes();
+        int step = 0;
+        for (Node n : nodes) {
+            if (n instanceof TransportNode) {
+                System.out.println((++step) + ": " + ((TransportNode)n).getTransport().getDescription());
+            }
+        }
+    }
+
     @Override
     public void run() {
-        boundary.addFirst(new Node(start, null));
+        lastNode = new Node(start, null);
+        boundary.addFirst(lastNode);
 
         int bestDistance = Integer.MAX_VALUE;
         long bestHeuristic = Integer.MAX_VALUE;
@@ -135,6 +154,7 @@ public class Pathfinder implements Runnable {
 
         done.set(!cancelled.get());
 
+        printWaypoints();
         boundary.clear();
         visited.clear();
         pending.clear();
