@@ -1,6 +1,7 @@
 package shortestpath.pathfinder;
 
 import lombok.Getter;
+import net.runelite.api.ItemID;
 import net.runelite.api.coords.WorldPoint;
 import shortestpath.Transport;
 
@@ -11,6 +12,7 @@ public class TransportNode extends Node implements Comparable<TransportNode> {
     public TransportNode(WorldPoint position, Node previous, int wait, Transport transport) {
         super(position, previous, wait);
         this.transport = transport;
+        this.gp += transport.getItemCost(ItemID.COINS_995);
     }
 
     @Override

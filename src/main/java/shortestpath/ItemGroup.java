@@ -31,6 +31,14 @@ public class ItemGroup {
         return true;
     }
 
+    public int getItemCount(int itemId) {
+        ItemStack item = items.get(itemId);
+        if (item == null) {
+            return 0;
+        }
+        return item.getCount();
+    }
+
     public static ItemGroup fromString(String item) {
         String[] params = item.split(",");
         ItemStack[] items = new ItemStack[params.length];
