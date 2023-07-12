@@ -163,7 +163,10 @@ public class ShortestPathPlugin extends Plugin {
                 pathfinderConfig.getTransports().clear();
                 pathfinderConfig.getTransports().putAll(transports);
             }
-            restartPathfinding(pathfinder.getStart(), pathfinder.getTarget());
+
+            if (pathfinder != null) {
+                restartPathfinding(pathfinder.getStart(), pathfinder.getTarget());
+            }
         }
     }
 
@@ -349,8 +352,12 @@ public class ShortestPathPlugin extends Plugin {
         if (target == null) {
             worldMapPointManager.remove(marker);
             marker = null;
-            pathfinder = null;
             startPointSet = false;
+
+            if (pathfinder != null) {
+                pathfinder.cancel();
+            }
+            pathfinder = null;
         } else {
             worldMapPointManager.removeIf(x -> x == marker);
             marker = new WorldMapPoint(target, MARKER_IMAGE);
