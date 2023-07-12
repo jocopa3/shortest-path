@@ -115,6 +115,7 @@ public class ShortestPathPlugin extends Plugin {
     private BufferedImage minimapSpriteResizeable;
     private Rectangle minimapRectangle = new Rectangle();
 
+    private Object pathfinderMutex = new Object();
     @Getter
     private Pathfinder pathfinder;
     private PathfinderConfig pathfinderConfig;
@@ -147,19 +148,38 @@ public class ShortestPathPlugin extends Plugin {
         overlayManager.remove(pathMapTooltipOverlay);
     }
 
-    Pattern EVENT_KEYS = Pattern.compile("^(useAgilityShortcuts|useGrappleShortcuts|useBoats|useFairyRings|useTeleports|useSpiritTree|useGnomeGlider|useItems|useSpells|itemsLocation)$");
+    Pattern EVENT_KEYS = Pattern.compile("^(useAgilityShortcuts|useGrappleShortcuts|useBoats|useFairyRings|useTeleports|useSpiritTree|useGnomeGlider|useItems|useSpells|itemsLocation|useGP|gpCost)$");
     @Subscribe
     public void onConfigChanged(ConfigChanged event) {
         if (!CONFIG_GROUP.equals(event.getGroup())) {
             return;
         }
 
-        boolean reloadTransports = EVENT_KEYS.matcher(event.getKey()).find();
-        if (reloadTransports && pathfinderConfig.getTransports().size() == 0) {
-            Map<WorldPoint, List<Transport>> transports = Transport.loadAllFromResources();
-            pathfinderConfig.getTransports().clear();
-            pathfinderConfig.getTransports().putAll(transports);
+        boolean reloadPathfinder = EVENT_KEYS.matcher(event.getKey()).find();
+        if (reloadPathfinder) {
+            // This branch likely isn't necessary
+            if (pathfinderConfig.getTransports().size() == 0) {
+                Map<WorldPoint, List<Transport>> transports = Transport.loadAllFromResources();
+                pathfinderConfig.getTransports().clear();
+                pathfinderConfig.getTransports().putAll(transports);
+            }
+            restartPathfinding(pathfinder.getStart(), pathfinder.getTarget());
         }
+    }
+
+    public void restartPathfinding(WorldPoint start, WorldPoint end) {
+        synchronized (pathfinderMutex) {
+            if (pathfinder != null) {
+                pathfinder.cancel();
+            }
+        }
+
+        getClientThread().invokeLater(() -> {
+            pathfinderConfig.refresh();
+            synchronized (pathfinderMutex) {
+                pathfinder = new Pathfinder(pathfinderConfig, start, end);
+            }
+        });
     }
 
     public boolean isNearPath(WorldPoint location) {
@@ -200,7 +220,7 @@ public class ShortestPathPlugin extends Plugin {
                 setTarget(null);
                 return;
             }
-            pathfinder = new Pathfinder(pathfinderConfig, currentLocation, pathfinder.getTarget());
+            restartPathfinding(currentLocation, pathfinder.getTarget());
         }
     }
 
@@ -343,7 +363,7 @@ public class ShortestPathPlugin extends Plugin {
             if (startPointSet && pathfinder != null) {
                 start = pathfinder.getStart();
             }
-            pathfinder = new Pathfinder(pathfinderConfig, start, target);
+            restartPathfinding(start, target);
         }
     }
 
@@ -352,7 +372,7 @@ public class ShortestPathPlugin extends Plugin {
             return;
         }
         startPointSet = true;
-        pathfinder = new Pathfinder(pathfinderConfig, start, pathfinder.getTarget());
+        restartPathfinding(start, pathfinder.getTarget());
     }
 
     public WorldPoint calculateMapPoint(Point point) {
