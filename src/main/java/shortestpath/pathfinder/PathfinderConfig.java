@@ -74,7 +74,6 @@ public class PathfinderConfig {
         useFairyRings = config.useFairyRings();
         useSpiritTree = config.useSpiritTree();
         useGnomeGliders = config.useGnomeGlider();
-        System.out.println("config.useGnomeGlider() = " + config.useGnomeGlider());
         useTeleports = config.useTeleports();
         useItems = config.useItems();
         useSpells = config.useSpells();
