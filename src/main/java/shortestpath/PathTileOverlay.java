@@ -36,7 +36,7 @@ public class PathTileOverlay extends Overlay {
     }
 
     private void renderTransports(Graphics2D graphics) {
-        for (WorldPoint a : plugin.getTransports().keySet()) {
+        for (WorldPoint a : plugin.getAllTransports().keySet()) {
             drawTile(graphics, a, config.colourTransports(), -1, true);
 
             Point ca = tileCenter(a);
@@ -46,7 +46,7 @@ public class PathTileOverlay extends Overlay {
             }
 
             StringBuilder s = new StringBuilder();
-            for (Transport b : plugin.getTransports().getOrDefault(a, new ArrayList<>())) {
+            for (Transport b : plugin.getAllTransports().getOrDefault(a, new ArrayList<>())) {
                 for (WorldPoint origin : WorldPoint.toLocalInstance(client, b.getOrigin())) {
                     Point cb = tileCenter(origin);
                     if (cb != null) {

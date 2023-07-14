@@ -18,14 +18,7 @@ import java.util.Map;
 import java.util.regex.Pattern;
 
 import lombok.Getter;
-import net.runelite.api.Client;
-import net.runelite.api.KeyCode;
-import net.runelite.api.MenuAction;
-import net.runelite.api.MenuEntry;
-import net.runelite.api.Player;
-import net.runelite.api.Point;
-import net.runelite.api.SpriteID;
-import net.runelite.api.Varbits;
+import net.runelite.api.*;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.events.GameTick;
 import net.runelite.api.events.MenuEntryAdded;
@@ -158,10 +151,10 @@ public class ShortestPathPlugin extends Plugin {
         boolean reloadPathfinder = EVENT_KEYS.matcher(event.getKey()).find();
         if (reloadPathfinder) {
             // This branch likely isn't necessary
-            if (pathfinderConfig.getTransports().size() == 0) {
+            if (pathfinderConfig.getAllTransports().size() == 0) {
                 Map<WorldPoint, List<Transport>> transports = Transport.loadAllFromResources();
-                pathfinderConfig.getTransports().clear();
-                pathfinderConfig.getTransports().putAll(transports);
+                pathfinderConfig.getAllTransports().clear();
+                pathfinderConfig.getAllTransports().putAll(transports);
             }
 
             if (pathfinder != null) {
@@ -281,6 +274,10 @@ public class ShortestPathPlugin extends Plugin {
 
     public Map<WorldPoint, List<Transport>> getTransports() {
         return pathfinderConfig.getTransports();
+    }
+
+    public Map<WorldPoint, List<Transport>> getAllTransports() {
+        return pathfinderConfig.getAllTransports();
     }
 
     public CollisionMap getMap() {

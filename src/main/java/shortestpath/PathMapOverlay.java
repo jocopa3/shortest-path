@@ -67,13 +67,13 @@ public class PathMapOverlay extends Overlay {
 
         if (config.drawTransports()) {
             graphics.setColor(Color.WHITE);
-            for (WorldPoint a : plugin.getTransports().keySet()) {
+            for (WorldPoint a : plugin.getAllTransports().keySet()) {
                 Point mapA = worldMapOverlay.mapWorldPointToGraphicsPoint(a);
                 if (mapA == null || !worldMapClipArea.contains(mapA.getX(), mapA.getY())) {
                     continue;
                 }
 
-                for (Transport b : plugin.getTransports().getOrDefault(a, new ArrayList<>())) {
+                for (Transport b : plugin.getAllTransports().getOrDefault(a, new ArrayList<>())) {
                     Point mapB = worldMapOverlay.mapWorldPointToGraphicsPoint(b.getDestination());
                     if (mapB == null || !worldMapClipArea.contains(mapB.getX(), mapB.getY())) {
                         continue;

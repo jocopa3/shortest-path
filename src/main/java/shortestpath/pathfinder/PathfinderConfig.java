@@ -21,6 +21,7 @@ public class PathfinderConfig {
     @Getter
     private final CollisionMap map;
 
+    @Getter
     private final Map<WorldPoint, List<Transport>> allTransports;
     @Getter
     private final Map<WorldPoint, List<Transport>> transports;
