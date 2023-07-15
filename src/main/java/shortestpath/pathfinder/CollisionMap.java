@@ -6,7 +6,6 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import net.runelite.api.coords.WorldPoint;
 import shortestpath.ShortestPathPlugin;
 import shortestpath.Transport;
 import shortestpath.Util;
@@ -55,20 +54,24 @@ public class CollisionMap extends SplitFlagMap {
         return !n(x, y, z) && !s(x, y, z) && !e(x, y, z) && !w(x, y, z);
     }
 
-    private static WorldPoint pointFromOrdinal(WorldPoint start, OrdinalDirection direction) {
-        return new WorldPoint(start.getX() + direction.x, start.getY() + direction.y, start.getPlane());
+    private static int neighborPointPackedFromOrdinal(int packedPoint, OrdinalDirection direction) {
+        final int x = Util.unpackWorldPositionX(packedPoint);
+        final int y = Util.unpackWorldPositionY(packedPoint);
+        final int plane = Util.unpackWorldPositionPlane(packedPoint);
+        return Util.packWorldPoint(x + direction.x, y + direction.y, plane);
     }
 
-    public List<Node> getNeighbors(Node node, PathfinderConfig config) {
-        int x = node.position.getX();
-        int y = node.position.getY();
-        int z = node.position.getPlane();
+    public List<Node> getNeighbors(Node node, Map<Integer, List<Transport>> transportsPacked) {
+        int x = node.getX();
+        int y = node.getY();
+        int z = node.getPlane();
 
-        List<Node> neighbors = new ArrayList<>();
+        List<Node> neighbors = new ArrayList<>(1);
 
-        // Transports are pre-filtered by PathfinderConfig.refreshTransportData
-        // Thus any transports in the list are guaranteed to be valid per the user's settings
-        for (Transport transport : config.getTransports().getOrDefault(node.position, (List<Transport>)Collections.EMPTY_LIST)) {
+        @SuppressWarnings("unchecked") // Quiet the List<Transport> cast from Collections.EMPTY_LIST
+        List<Transport> transports = transportsPacked.getOrDefault(node.packedPosition, (List<Transport>)Collections.EMPTY_LIST);
+        for (int i = 0; i < transports.size(); ++i) {
+            Transport transport = transports.get(i);
             neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait()));
         }
 
@@ -100,11 +103,14 @@ public class CollisionMap extends SplitFlagMap {
 
         for (int i = 0; i < traversable.length; i++) {
             OrdinalDirection d = ORDINAL_VALUES[i];
-            WorldPoint neighbor = pointFromOrdinal(node.position, d);
+            int neighborPacked = neighborPointPackedFromOrdinal(node.packedPosition, d);
             if (traversable[i]) {
-                neighbors.add(new Node(neighbor, node));
+                neighbors.add(new Node(neighborPacked, node));
             } else if (Math.abs(d.x + d.y) == 1 && isBlocked(x + d.x, y + d.y, z)) {
-                for (Transport transport : config.getTransports().getOrDefault(neighbor, (List<Transport>)Collections.EMPTY_LIST)) {
+                @SuppressWarnings("unchecked") // Quiet the List<Transport> cast from Collections.EMPTY_LIST
+                List<Transport> neighborTransports = transportsPacked.getOrDefault(node.packedPosition, (List<Transport>)Collections.EMPTY_LIST);
+                for (int t = 0; t < neighborTransports.size(); ++t) {
+                    Transport transport = neighborTransports.get(t);
                     neighbors.add(new Node(transport.getOrigin(), node));
                 }
             }

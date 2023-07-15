@@ -1,28 +1,58 @@
 package shortestpath.pathfinder;
 
 import net.runelite.api.coords.WorldPoint;
+import shortestpath.Util;
 
-public class VisitedTiles {
+public class VisitedTileSet {
     private static final int TOTAL_PLANES = 4;
     private static final int REGION_SIZE = 64;
 
     // TODO: what is the max number of regions?
     private static final int REGION_EXTENT_X = 192;
     private static final int REGION_EXTENT_Y = 256;
+
+    // Regions are lazily allocated in set(x, y, z)
     private final VisitedRegion[] visitedRegions = new VisitedRegion[REGION_EXTENT_X * REGION_EXTENT_Y];
 
     public boolean get(WorldPoint point) {
-        final int regionIndex = point.getRegionID();
+        return get(point.getRegionX(), point.getRegionY(), point.getPlane());
+    }
+
+    public boolean get(int packedPosition) {
+        final int x = Util.unpackWorldPositionX(packedPosition);
+        final int y = Util.unpackWorldPositionY(packedPosition);
+        final int plane = Util.unpackWorldPositionPlane(packedPosition);
+
+        return get(x, y, plane);
+    }
+
+    public boolean get(int x, int y, int plane) {
+        final int regionIndex = getRegionId(x, y);
         final VisitedRegion region = visitedRegions[regionIndex];
 
         if (region == null) {
             return false;
         }
 
-        return region.get(point.getRegionX(), point.getRegionY(), point.getPlane());
+        x %= REGION_SIZE;
+        y %= REGION_SIZE;
+        return region.get(x, y, plane);
     }
+
     public boolean set(WorldPoint point) {
-        final int regionIndex = point.getRegionID();
+        return set(point.getX(), point.getY(), point.getPlane());
+    }
+
+    public boolean set(int packedPosition) {
+        final int x = Util.unpackWorldPositionX(packedPosition);
+        final int y = Util.unpackWorldPositionY(packedPosition);
+        final int plane = Util.unpackWorldPositionPlane(packedPosition);
+
+        return set(x, y, plane);
+    }
+
+    public boolean set(int x, int y, int plane) {
+        final int regionIndex = getRegionId(x, y);
         VisitedRegion region = visitedRegions[regionIndex];
 
         if (region == null) {
@@ -30,7 +60,9 @@ public class VisitedTiles {
             visitedRegions[regionIndex] = region;
         }
 
-        return region.set(point.getRegionX(), point.getRegionY(), point.getPlane());
+        x %= REGION_SIZE;
+        y %= REGION_SIZE;
+        return region.set(x, y, plane);
     }
 
     public void clear() {
@@ -39,6 +71,10 @@ public class VisitedTiles {
                 visitedRegions[i] = null;
             }
         }
+    }
+
+    private static int getRegionId(int x, int y) {
+        return ((x >> 6) << 8) | (y >> 6);
     }
 
     private class VisitedRegion {
