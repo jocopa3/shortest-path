@@ -14,15 +14,16 @@ import java.util.concurrent.ExecutionException;
 import java.util.zip.GZIPInputStream;
 import shortestpath.Util;
 
-public abstract class SplitFlagMap {
+import static net.runelite.api.Constants.REGION_SIZE;
+
+public class SplitFlagMapData extends CollisionMapData {
     private static final int MAXIMUM_SIZE = 20 * 1024 * 1024;
-    private static final int REGION_SIZE = 64;
 
     private final LoadingCache<Integer, FlagMap> regionMaps;
-    private final int flagCount;
 
-    public SplitFlagMap(Map<Integer, byte[]> compressedRegions, int flagCount) {
-        this.flagCount = flagCount;
+    public SplitFlagMapData(Map<Integer, byte[]> compressedRegions, int flagCount) {
+        super(flagCount);
+
         regionMaps = CacheBuilder
                 .newBuilder()
                 .weigher((Weigher<Integer, FlagMap>) (k, v) -> v.flags.size() / 8)
@@ -44,23 +45,12 @@ public abstract class SplitFlagMap {
                 }));
     }
 
+    @Override
     public boolean get(int x, int y, int z, int flag) {
         try {
             return regionMaps.get(packPosition(x / REGION_SIZE, y / REGION_SIZE)).get(x, y, z, flag);
         } catch (ExecutionException e) {
             throw new UncheckedExecutionException(e);
         }
-    }
-
-    public static int unpackX(int position) {
-        return position & 0xFFFF;
-    }
-
-    public static int unpackY(int position) {
-        return (position >> 16) & 0xFFFF;
-    }
-
-    public static int packPosition(int x, int y) {
-        return (x & 0xFFFF) | ((y & 0xFFFF) << 16);
     }
 }

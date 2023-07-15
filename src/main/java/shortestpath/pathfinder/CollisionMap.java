@@ -10,16 +10,17 @@ import shortestpath.ShortestPathPlugin;
 import shortestpath.Transport;
 import shortestpath.Util;
 
-public class CollisionMap extends SplitFlagMap {
+public class CollisionMap {
     // Enum.values() makes copies every time which hurts performance in the hotpath
     private static final OrdinalDirection[] ORDINAL_VALUES = OrdinalDirection.values();
+    private final CollisionMapData collisionMapData;
 
     public CollisionMap(Map<Integer, byte[]> compressedRegions) {
-        super(compressedRegions, 2);
+        collisionMapData = new RawCollisionData(compressedRegions, 2);
     }
 
     public boolean n(int x, int y, int z) {
-        return get(x, y, z, 0);
+        return collisionMapData.get(x, y, z, 0);
     }
 
     public boolean s(int x, int y, int z) {
@@ -27,7 +28,7 @@ public class CollisionMap extends SplitFlagMap {
     }
 
     public boolean e(int x, int y, int z) {
-        return get(x, y, z, 1);
+        return collisionMapData.get(x, y, z, 1);
     }
 
     public boolean w(int x, int y, int z) {
@@ -66,7 +67,7 @@ public class CollisionMap extends SplitFlagMap {
         int y = node.getY();
         int z = node.getPlane();
 
-        List<Node> neighbors = new ArrayList<>(1);
+        List<Node> neighbors = new ArrayList<>();
 
         @SuppressWarnings("unchecked") // Quiet the List<Transport> cast from Collections.EMPTY_LIST
         List<Transport> transports = transportsPacked.getOrDefault(node.packedPosition, (List<Transport>)Collections.EMPTY_LIST);
@@ -127,7 +128,7 @@ public class CollisionMap extends SplitFlagMap {
                 String[] n = entry.getName().split("_");
 
                 compressedRegions.put(
-                        SplitFlagMap.packPosition(Integer.parseInt(n[0]), Integer.parseInt(n[1])),
+                        CollisionMapData.packPosition(Integer.parseInt(n[0]), Integer.parseInt(n[1])),
                         Util.readAllBytes(in)
                 );
             }
