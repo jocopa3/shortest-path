@@ -83,14 +83,14 @@ public class CollisionMap {
         // Thus any transports in the list are guaranteed to be valid per the user's settings
         for (int i = 0; i < transports.size(); ++i) {
             Transport transport = transports.get(i);
-            neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait()));
+            neighbors.add(new TransportNode(transport.getDestination(), node, transport));
         }
 
         if (node.isRootNode()) {
             transports = config.getTransportsPacked().getOrDefault(null, (List<Transport>)Collections.EMPTY_LIST);
             for (int i = 0; i < transports.size(); ++i) {
                 Transport transport = transports.get(i);
-                neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait()));
+                neighbors.add(new TransportNode(transport.getDestination(), node, transport));
             }
         }
 

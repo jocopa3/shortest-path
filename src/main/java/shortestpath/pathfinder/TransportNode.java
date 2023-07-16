@@ -9,8 +9,8 @@ public class TransportNode extends Node implements Comparable<TransportNode> {
     @Getter
     final private Transport transport;
 
-    public TransportNode(WorldPoint position, Node previous, int wait, Transport transport) {
-        super(position, previous, wait);
+    public TransportNode(WorldPoint position, Node previous, Transport transport) {
+        super(position, previous, transport.getWait());
         this.transport = transport;
         this.gp += transport.getItemCost(ItemID.COINS_995);
     }

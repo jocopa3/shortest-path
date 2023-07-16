@@ -92,8 +92,8 @@ public class Pathfinder implements Runnable {
     }
 
     public List<WorldPoint> getPath() {
-        if (path.isEmpty()) {
-            path = lastNode.getPathNodes();
+        if (path == null || path.isEmpty()) {
+            path = lastNode.getPathPoints();
         }
         return path;
     }

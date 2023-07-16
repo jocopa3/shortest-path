@@ -235,7 +235,7 @@ public interface ShortestPathConfig extends Config {
     )
     @Range(
         min = 1,
-        max = 30
+        max = 1000
     )
     @ConfigItem(
         keyName = "calculationCutoff",
