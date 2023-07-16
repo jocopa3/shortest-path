@@ -1,6 +1,7 @@
 package shortestpath.pathfinder;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
@@ -38,6 +39,8 @@ public class Pathfinder implements Runnable {
     @SuppressWarnings("unchecked") // Casting EMPTY_LIST is safe here
     private List<WorldPoint> path = (List<WorldPoint>)Collections.EMPTY_LIST;
     private boolean pathNeedsUpdate = false;
+    private List<String> actions = (List<String>)Collections.EMPTY_LIST;
+    private boolean actionsNeedUpdate = false;
     private Node bestLastNode;
 
     public Pathfinder(PathfinderConfig config, WorldPoint start, WorldPoint target) {
@@ -69,9 +72,30 @@ public class Pathfinder implements Runnable {
 
         if (pathNeedsUpdate) {
             path = lastNode.getPath();
+            pathNeedsUpdate = false;
         }
 
         return path;
+    }
+
+    public List<String> getActions() {
+        Node lastNode = bestLastNode; // For thread safety, read bestLastNode once
+        if (lastNode == null) {
+            return actions;
+        }
+
+        if (actionsNeedUpdate) {
+            List<Node> nodes = lastNode.getPathNodes();
+            actions = new ArrayList<>();
+            for (Node n : nodes) {
+                if (n instanceof TransportNode) {
+                    actions.add(((TransportNode)n).getTransport().getDescription());
+                }
+            }
+            actionsNeedUpdate = false;
+        }
+
+        return actions;
     }
 
     private void addNeighbors(Node node) {
@@ -87,23 +111,6 @@ public class Pathfinder implements Runnable {
                 } else {
                     boundary.addLast(neighbor);
                 }
-            }
-        }
-    }
-
-    public List<WorldPoint> getPath() {
-        if (path == null || path.isEmpty()) {
-            path = lastNode.getPathPoints();
-        }
-        return path;
-    }
-
-    public void printWaypoints() {
-        List<Node> nodes = lastNode.getPathNodes();
-        int step = 0;
-        for (Node n : nodes) {
-            if (n instanceof TransportNode) {
-                System.out.println((++step) + ": " + ((TransportNode)n).getTransport().getDescription());
             }
         }
     }
@@ -157,7 +164,6 @@ public class Pathfinder implements Runnable {
 
         done.set(!cancelled.get());
 
-        printWaypoints();
         boundary.clear();
         visited.clear();
         pending.clear();

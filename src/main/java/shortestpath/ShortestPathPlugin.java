@@ -97,6 +97,9 @@ public class ShortestPathPlugin extends Plugin {
     private PathMapTooltipOverlay pathMapTooltipOverlay;
 
     @Inject
+    private PathPanelOverlay pathPanelOverlay;
+
+    @Inject
     private SpriteManager spriteManager;
 
     @Inject
@@ -140,6 +143,7 @@ public class ShortestPathPlugin extends Plugin {
         overlayManager.add(pathMinimapOverlay);
         overlayManager.add(pathMapOverlay);
         overlayManager.add(pathMapTooltipOverlay);
+        overlayManager.add(pathPanelOverlay);
     }
 
     @Override
@@ -148,6 +152,7 @@ public class ShortestPathPlugin extends Plugin {
         overlayManager.remove(pathMinimapOverlay);
         overlayManager.remove(pathMapOverlay);
         overlayManager.remove(pathMapTooltipOverlay);
+        overlayManager.remove(pathPanelOverlay);
     }
 
     public void restartPathfinding(WorldPoint start, WorldPoint end) {
@@ -165,7 +170,7 @@ public class ShortestPathPlugin extends Plugin {
         });
     }
     
-    Pattern EVENT_KEYS = Pattern.compile("^(useAgilityShortcuts|useGrappleShortcuts|useBoats|useFairyRings|useTeleports|useSpiritTree|useGnomeGlider|useItems|useSpells|itemsLocation|useGP|gpCost)$");
+    Pattern EVENT_KEYS = Pattern.compile("^(avoidWilderness|useAgilityShortcuts|useGrappleShortcuts|useBoats|useFairyRings|useTeleports|useSpiritTree|useGnomeGlider|useItems|useSpells|itemsLocation|useGP|gpCost)$");
     @Subscribe
     public void onConfigChanged(ConfigChanged event) {
         if (!CONFIG_GROUP.equals(event.getGroup())) {
@@ -173,10 +178,8 @@ public class ShortestPathPlugin extends Plugin {
         }
 
         boolean reloadTransports = EVENT_KEYS.matcher(event.getKey()).find();
-        if (reloadTransports && pathfinderConfig.getTransports().size() == 0) {
-            Map<WorldPoint, List<Transport>> transports = Transport.loadAllFromResources();
-            pathfinderConfig.getTransports().clear();
-            pathfinderConfig.getTransports().putAll(transports);
+        if (reloadTransports && pathfinder != null) {
+            restartPathfinding(pathfinder.getStart(), pathfinder.getTarget());
         }
     }
 

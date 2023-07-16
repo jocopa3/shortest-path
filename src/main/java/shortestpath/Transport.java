@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import lombok.Getter;
-import net.runelite.api.ItemID;
 import net.runelite.api.Quest;
 import net.runelite.api.Skill;
 import net.runelite.api.coords.WorldPoint;
@@ -82,6 +81,10 @@ public class Transport {
     @Getter
     private int wait;
 
+    /** Tooltip text of the transport method */
+    @Getter
+    private String tooltip;
+
     /** Description of the transport method */
     @Getter
     private String description;
@@ -128,12 +131,13 @@ public class Transport {
             Integer.parseInt(parts_destination[1]),
             Integer.parseInt(parts_destination[2]));
 
-        // Description
+        // Tooltip text
         if (parts.length >= 3 && !parts[2].isEmpty()) {
-             description = parts[2];
+             tooltip = parts[2];
         } else {
-            description = "";
+            tooltip = "";
         }
+        description = tooltip.replaceAll("\\s*\\d+?$", "");
 
         // Skill requirements
         if (parts.length >= 4 && !parts[3].isEmpty()) {
@@ -228,17 +232,17 @@ public class Transport {
     private static class MultiDirectionalTransport {
         final WorldPoint point;
         final String questName;
-        final String description;
+        final String tooltip;
         final boolean oneWay;
 
         MultiDirectionalTransport(WorldPoint point, String questName, String description) {
             this(point, questName, description, false);
         }
 
-        MultiDirectionalTransport(WorldPoint point, String questName, String description, boolean oneWay) {
+        MultiDirectionalTransport(WorldPoint point, String questName, String tooltip, boolean oneWay) {
             this.point = point;
             this.questName = questName;
-            this.description = description;
+            this.tooltip = tooltip;
             this.oneWay = oneWay;
         }
     }
@@ -254,7 +258,8 @@ public class Transport {
                 }
 
                 Transport transport = new Transport(origin.point, destination.point, transportType);
-                transport.description = destination.description.replaceFirst(" \\d*?$", ""); // Remove last digits;
+                transport.tooltip = destination.tooltip;
+                transport.description = destination.tooltip.replaceFirst("\\s*\\d+?$", ""); // Remove last digits;
                 transport.wait = wait;
 
                 if (!Strings.isNullOrEmpty(destination.questName)) {

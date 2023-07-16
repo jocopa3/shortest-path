@@ -23,7 +23,6 @@ public class ItemGroup {
     }
 
     public boolean hasItems(ItemGroup other) {
-        boolean hasItems = true;
         for (Map.Entry<Integer, ItemStack> entry : other.items.entrySet()) {
             if (!items.containsKey(entry.getKey())) return false;
             if (items.get(entry.getKey()).getCount() < entry.getValue().getCount()) return false;
