@@ -12,7 +12,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import lombok.Getter;
 import net.runelite.api.coords.WorldPoint;
 import shortestpath.WorldPointUtil;
-import shortestpath.Transport;
 
 public class Pathfinder implements Runnable {
     private AtomicBoolean done = new AtomicBoolean();
@@ -71,7 +70,7 @@ public class Pathfinder implements Runnable {
         }
 
         if (pathNeedsUpdate) {
-            path = lastNode.getPath();
+            path = lastNode.getPathPoints();
             pathNeedsUpdate = false;
         }
 
@@ -117,8 +116,8 @@ public class Pathfinder implements Runnable {
 
     @Override
     public void run() {
-        lastNode = new Node(start, null);
-        boundary.addFirst(lastNode);
+        bestLastNode = new Node(start, null);
+        boundary.addFirst(bestLastNode);
 
         int bestDistance = Integer.MAX_VALUE;
         long bestHeuristic = Integer.MAX_VALUE;
@@ -142,6 +141,7 @@ public class Pathfinder implements Runnable {
             if (node.packedPosition == targetPacked || !config.isNear(start)) {
                 bestLastNode = node;
                 pathNeedsUpdate = true;
+                actionsNeedUpdate = true;
                 break;
             }
 
@@ -150,6 +150,7 @@ public class Pathfinder implements Runnable {
             if (heuristic < bestHeuristic || (heuristic <= bestHeuristic && distance < bestDistance)) {
                 bestLastNode = node;
                 pathNeedsUpdate = true;
+                actionsNeedUpdate = true;
                 bestDistance = distance;
                 bestHeuristic = heuristic;
                 cutoffTimeMillis = System.currentTimeMillis() + cutoffDurationMillis;

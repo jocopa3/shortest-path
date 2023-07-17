@@ -14,7 +14,7 @@ public class Node {
     public final int steps;
 
     public Node(WorldPoint position, Node previous, int wait) {
-        this(WorldPointUtil.packWorldPoint(position, prevous, wait));
+        this(WorldPointUtil.packWorldPoint(position), previous, wait);
     }
 
     public Node(WorldPoint position, Node previous) {

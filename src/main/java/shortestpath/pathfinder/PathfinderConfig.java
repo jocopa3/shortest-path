@@ -9,13 +9,13 @@ import lombok.Getter;
 import net.runelite.api.*;
 import net.runelite.api.coords.WorldArea;
 import net.runelite.api.coords.WorldPoint;
+import shortestpath.ItemGroup;
+import shortestpath.ItemSearchLocation;
 import shortestpath.ShortestPathConfig;
 import shortestpath.ShortestPathPlugin;
+import shortestpath.Spellbook;
 import shortestpath.Transport;
 import shortestpath.WorldPointUtil;
-import net.runelite.api.widgets.WidgetInfo;
-import net.runelite.client.game.ItemManager;
-import net.runelite.client.game.ItemMapping;
 
 public class PathfinderConfig {
     private static final WorldArea WILDERNESS_ABOVE_GROUND = new WorldArea(2944, 3523, 448, 448, 0);
@@ -136,6 +136,7 @@ public class PathfinderConfig {
         }
 
         transports.clear();
+        transportsPacked.clear();
         for (Map.Entry<WorldPoint, List<Transport>> entry : allTransports.entrySet()) {
             List<Transport> usableTransports = new ArrayList<>(entry.getValue().size());
             for (Transport transport : entry.getValue()) {
@@ -154,7 +155,11 @@ public class PathfinderConfig {
             if (!usableTransports.isEmpty()) {
                 WorldPoint point = entry.getKey();
                 transports.put(point, usableTransports);
-                transportsPacked.put(WorldPointUtil.packWorldPoint(point), usableTransports);
+                if (point == null) {
+                    transportsPacked.put(null, usableTransports);
+                } else {
+                    transportsPacked.put(WorldPointUtil.packWorldPoint(point), usableTransports);
+                }
             }
         }
     }
