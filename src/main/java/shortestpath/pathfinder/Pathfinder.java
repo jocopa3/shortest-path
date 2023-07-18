@@ -45,7 +45,7 @@ public class Pathfinder implements Runnable {
         this.target = target;
         targetPacked = WorldPointUtil.packWorldPoint(target);
         targetInWilderness = PathfinderConfig.isInWilderness(target);
-        
+
         new Thread(this).start();
     }
 
@@ -72,24 +72,25 @@ public class Pathfinder implements Runnable {
     }
 
     private void addNeighbors(Node node) {
-        List<Node> nodes = map.getNeighbors(node, config);
+        List<Node> nodes = map.getNeighbors(node, visited, config);
         for (int i = 0; i < nodes.size(); ++i) {
             Node neighbor = nodes.get(i);
-            if (visited.get(neighbor.packedPosition) || (config.isAvoidWilderness() && config.avoidWilderness(node.packedPosition, neighbor.packedPosition, targetInWilderness))) {
+            if ((config.isAvoidWilderness() && config.avoidWilderness(node.packedPosition, neighbor.packedPosition, targetInWilderness))) {
                 continue;
             }
-            if (visited.set(neighbor.packedPosition)) {
-                if (neighbor instanceof TransportNode) {
-                    pending.add(neighbor);
-                } else {
-                    boundary.addLast(neighbor);
-                }
+
+            visited.set(neighbor.packedPosition);
+            if (neighbor instanceof TransportNode) {
+                pending.add(neighbor);
+            } else {
+                boundary.addLast(neighbor);
             }
         }
     }
 
     @Override
     public void run() {
+        long startTime = System.nanoTime();
         boundary.addFirst(new Node(start, null));
 
         int bestDistance = Integer.MAX_VALUE;
@@ -136,5 +137,7 @@ public class Pathfinder implements Runnable {
         boundary.clear();
         visited.clear();
         pending.clear();
+        long endTime = System.nanoTime();
+        System.out.println("Time: " + ((endTime - startTime) / 1000000.0) + "ms");
     }
 }
