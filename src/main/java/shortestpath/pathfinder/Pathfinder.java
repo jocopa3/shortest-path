@@ -10,6 +10,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import lombok.Getter;
 import net.runelite.api.coords.WorldPoint;
+import shortestpath.SimpleIntHashMap;
 import shortestpath.WorldPointUtil;
 
 public class Pathfinder implements Runnable {
