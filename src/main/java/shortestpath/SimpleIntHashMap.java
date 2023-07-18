@@ -1,10 +1,31 @@
 package shortestpath;
 
+import java.lang.reflect.Array;
 import java.util.Arrays;
 
 public class SimpleIntHashMap<V> {
-    private V[][] values;
-    private int[][] keys;
+    private class IntNode<V> {
+        private int key;
+        private V value;
+
+        IntNode(int key, V value) {
+            this.key = key;
+            this.value = value;
+        }
+    }
+
+    // This is just a container to get around Java's generic cast constraints
+    // If buckets become too large then it may be worth converting to linked-list and turn buckets into a balanced tree
+    private class Bucket {
+        IntNode<V>[] values;
+        Bucket(int size) {
+            @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
+            IntNode<V>[] temp = (IntNode<V>[])Array.newInstance(IntNode.class, size);
+            values = temp;
+        }
+    }
+
+    private Bucket[] buckets;
     private int size;
     private int capacity;
     private int bucketSize = 8;
@@ -33,19 +54,23 @@ public class SimpleIntHashMap<V> {
         return (hash(key) & 0x7FFFFFFF) % (int)maxSize;
     }
 
-    private int bucketIndex(int key, int bucket) {
-        int[] keyBucket = keys[bucket];
-        if (keyBucket == null) {
+    private int bucketIndex(int key, int bucketIndex) {
+        Bucket bucket = buckets[bucketIndex];
+        if (bucket == null) {
             return -1;
         }
 
-        for (int i = 0; i < bucketSize; ++i) {
-            if (keyBucket[i] == key) {
+        for (int i = 0; i < bucket.values.length; ++i) {
+            if (bucket.values[i] == null) {
+                break;
+            }
+
+            if (bucket.values[i].key == key) {
                 return i;
             }
         }
 
-        // Searched the entire map and found nothing
+        // Searched the bucket and found nothing
         return -1;
     }
 
@@ -55,7 +80,7 @@ public class SimpleIntHashMap<V> {
         if (index == -1) {
             return null;
         }
-        return values[bucket][index];
+        return buckets[bucket].values[index].value;
     }
 
     public V getOrDefault(int key, V defaultValue) {
@@ -64,42 +89,38 @@ public class SimpleIntHashMap<V> {
         if (index == -1) {
             return defaultValue;
         }
-        return values[bucket][index];
+        return buckets[bucket].values[index].value;
     }
 
     public V put(int key, V value) {
-        int index = getBucket(key);
-        V[] valueBucket = values[index];
+        int bucketIndex = getBucket(key);
+        Bucket bucket = buckets[bucketIndex];
 
-        if (valueBucket == null) {
-            int[] keyBucket = new int[bucketSize];
-            keyBucket[0] = key;
-            keys[index] = keyBucket;
-
+        if (bucket == null) {
             @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
-            V[] temp = (V[])new Object[bucketSize];
-            temp[0] = value;
-            values[index] = temp;
-
+            Bucket newBucket = new Bucket(bucketSize);
+            IntNode<V> newNode = new IntNode<>(key, value);
+            newBucket.values[0] = newNode;
+            buckets[bucketIndex] = newBucket;
             incrementSize();
             return null;
         }
 
-        int[] keyBucket = keys[index];
-        for (int i = 0; i < bucketSize; ++i) {
-            if (keyBucket[i] == key) {
-                V previous = values[index][i];
-                values[index][i] = value;
-                return previous;
-            } else if (valueBucket[i] == null) {
-                keyBucket[i] = key;
-                valueBucket[i] = value;
+        for (int i = 0; i < bucket.values.length; ++i) {
+            if (bucket.values[i] == null) {
+                IntNode<V> newNode = new IntNode<>(key, value);
+                bucket.values[i] = newNode;
                 return null;
+            } else if (bucket.values[i].key == key) {
+                V previous = bucket.values[i].value;
+                bucket.values[i].value = value;
+                return previous;
             }
         }
 
-        grow();
-        return put(key, value);
+        // No space in the bucket, grow it
+        growBucket(bucketIndex).values[bucket.values.length] = new IntNode<>(key, value);
+        return null;
     }
 
     private void incrementSize() {
@@ -121,47 +142,48 @@ public class SimpleIntHashMap<V> {
         capacity = newCapacity;
     }
 
+    private Bucket growBucket(int bucketIndex) {
+        Bucket oldBucket = buckets[bucketIndex];
+        Bucket newBucket = new Bucket(oldBucket.values.length * 2);
+        System.arraycopy(oldBucket.values, 0, newBucket.values, 0, oldBucket.values.length);
+        buckets[bucketIndex] = newBucket;
+        return newBucket;
+    }
+
     private void grow() {
         setNewCapacity((int)maxSize);
 
-        V[][] oldValues = values;
-        int[][] oldKeys = keys;
+        Bucket[] oldBuckets = buckets;
         recreateArrays();
 
-        for (int i = 0; i < oldValues.length; ++i) {
-            V[] oldValueBucket = oldValues[i];
-            if (oldValueBucket == null) {
+        for (int i = 0; i < oldBuckets.length; ++i) {
+            Bucket oldBucket = oldBuckets[i];
+            if (oldBucket == null) {
                 continue;
             }
 
-            int[] oldKeyBucket = oldKeys[i];
-            for (int ind = 0; ind < bucketSize; ++ind) {
-                if (oldValueBucket[ind] == null) {
+            for (int ind = 0; ind < oldBucket.values.length; ++ind) {
+                if (oldBucket.values[ind] == null) {
                     break;
                 }
 
                 int bucketIndex = getBucket(ind);
-                V[] valueBucket = values[bucketIndex];
-                if (valueBucket == null) {
-                    @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
-                    V[] newValueBucket = (V[])new Object[bucketSize];
-                    newValueBucket[0] = oldValueBucket[i];
-                    values[bucketIndex] = newValueBucket;
-
-                    int[] newKeyBucket = new int[bucketSize];
-                    newKeyBucket[0] = oldKeyBucket[i];
-                    keys[bucketIndex] = newKeyBucket;
+                Bucket newBucket = buckets[bucketIndex];
+                if (newBucket == null) {
+                    newBucket = new Bucket(bucketSize);
+                    buckets[bucketIndex] = newBucket;
                 } else {
                     int bInd;
-                    for (bInd = 0; bInd < bucketSize; ++bInd) {
-                        if (valueBucket[bInd] == null) {
-                            valueBucket[bInd] = oldValueBucket[i];
-                            keys[bucketIndex][bInd] = oldKeyBucket[i];
+                    for (bInd = 0; bInd < newBucket.values.length; ++bInd) {
+                        if (newBucket.values[bInd] == null) {
+                            newBucket.values[bInd] = oldBucket.values[ind];
+                            break;
                         }
                     }
 
-                    if (bInd >= bucketSize) {
-                        grow();
+                    if (bInd >= newBucket.values.length) {
+                        growBucket(bucketIndex).values[newBucket.values.length] = oldBucket.values[ind];
+
                         return;
                     }
                 }
@@ -171,14 +193,12 @@ public class SimpleIntHashMap<V> {
 
     private void recreateArrays() {
         @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
-        V[][] tempValues = (V[][])new Object[(int)maxSize][];
-        values = tempValues;
-        keys = new int[(int)maxSize][];
+        Bucket[] temp = (Bucket[])Array.newInstance(Bucket.class, (int)maxSize);
+        buckets = temp;
     }
 
     public void clear() {
         size = 0;
-        Arrays.fill(keys, null);
-        Arrays.fill(values, null);
+        Arrays.fill(buckets, null);
     }
 }
