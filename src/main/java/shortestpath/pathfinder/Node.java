@@ -3,10 +3,13 @@ package shortestpath.pathfinder;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import net.runelite.api.coords.WorldPoint;
 import shortestpath.WorldPointUtil;
 
 public class Node {
+    static AtomicInteger nodeCount = new AtomicInteger(0);
     public final int packedPosition;
     public final Node previous;
     public final int cost;
@@ -15,6 +18,7 @@ public class Node {
         this.packedPosition = WorldPointUtil.packWorldPoint(position);
         this.previous = previous;
         this.cost = cost(previous, wait);
+        nodeCount.incrementAndGet();
     }
 
     public Node(WorldPoint position, Node previous) {
@@ -25,6 +29,7 @@ public class Node {
         this.packedPosition = packedPosition;
         this.previous = previous;
         this.cost = cost(previous, wait);
+        nodeCount.incrementAndGet();
     }
 
     public Node(int packedPosition, Node previous) {

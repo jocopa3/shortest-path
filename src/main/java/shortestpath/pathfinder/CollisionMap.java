@@ -69,22 +69,22 @@ public class CollisionMap {
     private final List<Node> neighbors = new ArrayList<>(16);
     private final boolean[] traversable = new boolean[8];
 
-    public List<Node> getNeighbors(Node node, PathfinderConfig config) {
+    public List<Node> getNeighbors(Node node, PathfinderConfig config, VisitedTiles visited) {
         final int x = WorldPointUtil.unpackWorldX(node.packedPosition);
         final int y = WorldPointUtil.unpackWorldY(node.packedPosition);
         final int z = WorldPointUtil.unpackWorldPlane(node.packedPosition);
 
         neighbors.clear();
 
-        @SuppressWarnings("unchecked") // Casting EMPTY_LIST to List<Transport> is safe here
-        List<Transport> transports = config.getTransportsPacked().getOrDefault(node.packedPosition, (List<Transport>)Collections.EMPTY_LIST);
+        //@SuppressWarnings("unchecked") // Casting EMPTY_LIST to List<Transport> is safe here
+        //List<Transport> transports = config.getTransportsPacked().getOrDefault(node.packedPosition, (List<Transport>)Collections.EMPTY_LIST);
 
         // Transports are pre-filtered by PathfinderConfig.refreshTransportData
         // Thus any transports in the list are guaranteed to be valid per the user's settings
-        for (int i = 0; i < transports.size(); ++i) {
-            Transport transport = transports.get(i);
-            neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait()));
-        }
+//        for (int i = 0; i < transports.size(); ++i) {
+//            Transport transport = transports.get(i);
+//            neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait()));
+//        }
 
         if (isBlocked(x, y, z)) {
             boolean westBlocked = isBlocked(x - 1, y, z);
@@ -117,15 +117,18 @@ public class CollisionMap {
         for (int i = 0; i < traversable.length; i++) {
             OrdinalDirection d = ORDINAL_VALUES[i];
             int neighborPacked = packedPointFromOrdinal(node.packedPosition, d);
+            if (visited.get(neighborPacked)) {
+                continue;
+            }
             if (traversable[i]) {
                 neighbors.add(new Node(neighborPacked, node));
             } else if (Math.abs(d.x + d.y) == 1 && isBlocked(x + d.x, y + d.y, z)) {
-                @SuppressWarnings("unchecked") // Casting EMPTY_LIST to List<Transport> is safe here
-                List<Transport> neighborTransports = config.getTransportsPacked().getOrDefault(neighborPacked, (List<Transport>)Collections.EMPTY_LIST);
-                for (int t = 0; t < neighborTransports.size(); ++t) {
-                    Transport transport = neighborTransports.get(t);
-                    neighbors.add(new Node(transport.getOrigin(), node));
-                }
+                //@SuppressWarnings("unchecked") // Casting EMPTY_LIST to List<Transport> is safe here
+                //List<Transport> neighborTransports = config.getTransportsPacked().getOrDefault(neighborPacked, (List<Transport>)Collections.EMPTY_LIST);
+//                for (int t = 0; t < neighborTransports.size(); ++t) {
+//                    Transport transport = neighborTransports.get(t);
+//                    neighbors.add(new Node(transport.getOrigin(), node));
+//                }
             }
         }
 

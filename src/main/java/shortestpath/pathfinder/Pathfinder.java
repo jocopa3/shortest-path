@@ -29,14 +29,18 @@ public class Pathfinder implements Runnable {
 
     // Capacities should be enough to store all nodes without requiring the queue to grow
     // They were found by checking the max queue size
-    private final Deque<Node> boundary = new ArrayDeque<>(4096);
+    private final Deque<Node> boundaryStart = new ArrayDeque<>(4096);
+    private final Deque<Node> boundaryTarget = new ArrayDeque<>(4096);
     private final Queue<Node> pending = new PriorityQueue<>(256);
-    private final VisitedTiles visited = new VisitedTiles();
+    private final VisitedTiles visitedStart = new VisitedTiles();
+    private final VisitedTiles visitedTarget = new VisitedTiles();
 
     @SuppressWarnings("unchecked") // Casting EMPTY_LIST is safe here
     private List<WorldPoint> path = (List<WorldPoint>)Collections.EMPTY_LIST;
     private boolean pathNeedsUpdate = false;
-    private Node bestLastNode;
+    private Node rootNodeS;
+    private Node bestLastNodeS;
+    private Node rootNodeT;
 
     public Pathfinder(PathfinderConfig config, WorldPoint start, WorldPoint target) {
         this.config = config;
@@ -58,7 +62,7 @@ public class Pathfinder implements Runnable {
     }
 
     public List<WorldPoint> getPath() {
-        Node lastNode = bestLastNode; // For thread safety, read bestLastNode once
+        Node lastNode = bestLastNodeS; // For thread safety, read bestLastNode once
         if (lastNode == null) {
             return path;
         }
@@ -71,70 +75,92 @@ public class Pathfinder implements Runnable {
         return path;
     }
 
-    private void addNeighbors(Node node) {
-        List<Node> nodes = map.getNeighbors(node, config);
+    private Node findLeaf(Deque<Node> fringeNodes, int leafPositionPacked) {
+        while (!fringeNodes.isEmpty()) {
+            Node leaf = fringeNodes.removeFirst();
+            if (leaf.packedPosition == leafPositionPacked) {
+                return leaf;
+            }
+        }
+        return null;
+    }
+
+    private void addNeighbors(Node node, Deque<Node> boundary, VisitedTiles visitedTiles) {
+        List<Node> nodes = map.getNeighbors(node, config, visitedTiles);
         for (int i = 0; i < nodes.size(); ++i) {
             Node neighbor = nodes.get(i);
-            if (visited.get(neighbor.packedPosition) || (config.isAvoidWilderness() && config.avoidWilderness(node.packedPosition, neighbor.packedPosition, targetInWilderness))) {
+            if ((config.isAvoidWilderness() && config.avoidWilderness(node.packedPosition, neighbor.packedPosition, targetInWilderness))) {
                 continue;
             }
-            if (visited.set(neighbor.packedPosition)) {
-                if (neighbor instanceof TransportNode) {
-                    pending.add(neighbor);
-                } else {
-                    boundary.addLast(neighbor);
-                }
+            visitedTiles.set(neighbor.packedPosition);
+            if (neighbor instanceof TransportNode) {
+                //pending.add(neighbor);
+            } else {
+                boundary.addLast(neighbor);
             }
         }
     }
 
+    private void cleanup() {
+        boundaryStart.clear();
+        boundaryTarget.clear();
+        visitedStart.clear();
+        visitedTarget.clear();
+        pending.clear();
+    }
+
     @Override
     public void run() {
-        boundary.addFirst(new Node(start, null));
+        Node.nodeCount.set(0);
 
-        int bestDistance = Integer.MAX_VALUE;
-        long bestHeuristic = Integer.MAX_VALUE;
-        long cutoffDurationMillis = config.getCalculationCutoffMillis();
-        long cutoffTimeMillis = System.currentTimeMillis() + cutoffDurationMillis;
+        rootNodeS = new Node(start, null);
+        boundaryStart.addFirst(rootNodeS);
+        rootNodeT = new Node(target, null);
+        boundaryTarget.addFirst(rootNodeT);
+        Node meetingPoint = null;
 
-        while (!cancelled.get() && (!boundary.isEmpty() || !pending.isEmpty())) {
-            Node node = boundary.peekFirst();
-            Node p = pending.peek();
-
-            if (p != null && (node == null || p.cost < node.cost)) {
-                boundary.addFirst(p);
-                pending.poll();
+        // Bidirectional search
+        while (!cancelled.get() && ((!boundaryStart.isEmpty() && !boundaryTarget.isEmpty()) || !pending.isEmpty())) {
+            Node nodeS = boundaryStart.peekFirst();
+            Node nodeT = boundaryTarget.peekFirst();
+            if (visitedStart.get(nodeT.packedPosition)) {
+                bestLastNodeS = findLeaf(boundaryStart, nodeT.packedPosition);
+                meetingPoint = bestLastNodeS;
+                break;
+            } else if (visitedTarget.get(nodeS.packedPosition)) {
+                bestLastNodeS = nodeS;
+                meetingPoint = bestLastNodeS;
+                break;
             }
+            boundaryStart.removeFirst();
+            boundaryTarget.removeFirst();
 
-            node = boundary.removeFirst();
+            addNeighbors(nodeS, boundaryStart, visitedStart);
+            addNeighbors(nodeT, boundaryTarget, visitedTarget);
+        }
 
+        if (meetingPoint == null) {
+            done.set(!cancelled.get());
+            cleanup();
+            return;
+        }
+
+        // Unidirectional search from meeting point
+        // TODO: Remove; the first search should reconstruct the path once found
+        boundaryStart.addFirst(rootNodeS);
+        while (!cancelled.get() && (!boundaryStart.isEmpty() || !pending.isEmpty())) {
+            Node node = boundaryStart.removeFirst();
             if (node.packedPosition == targetPacked) {
-                bestLastNode = node;
+                bestLastNodeS = node;
                 pathNeedsUpdate = true;
                 break;
             }
 
-            int distance = WorldPointUtil.distanceBetween(node.packedPosition, targetPacked);
-            long heuristic = distance + WorldPointUtil.distanceBetween(node.packedPosition, targetPacked, 2);
-            if (heuristic < bestHeuristic || (heuristic <= bestHeuristic && distance < bestDistance)) {
-                bestLastNode = node;
-                pathNeedsUpdate = true;
-                bestDistance = distance;
-                bestHeuristic = heuristic;
-                cutoffTimeMillis = System.currentTimeMillis() + cutoffDurationMillis;
-            }
-
-            if (System.currentTimeMillis() > cutoffTimeMillis) {
-                break;
-            }
-
-            addNeighbors(node);
+            addNeighbors(node, boundaryStart, visitedStart);
         }
 
         done.set(!cancelled.get());
-
-        boundary.clear();
-        visited.clear();
-        pending.clear();
+        cleanup();
+        System.out.println("Nodes: " + Node.nodeCount.get());
     }
 }
