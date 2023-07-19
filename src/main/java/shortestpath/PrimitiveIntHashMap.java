@@ -57,6 +57,10 @@ public class PrimitiveIntHashMap<V> {
     }
 
     public V put(int key, V value) {
+        if (value == null) {
+            throw new IllegalArgumentException("null values cannot be inserted");
+        }
+
         int bucketIndex = getBucket(key);
         IntNode<V>[] bucket = buckets[bucketIndex];
 
