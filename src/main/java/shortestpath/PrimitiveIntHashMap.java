@@ -2,11 +2,10 @@ package shortestpath;
 
 import java.lang.reflect.Array;
 import java.util.Arrays;
-import java.util.function.Consumer;
 
 // This class is not intended as a general purpose replacement for a hashmap; it lacks convenience features
 // found in regular maps and has no way to remove elements or get a list of keys/values.
-public class SimpleIntHashMap<V> {
+public class PrimitiveIntHashMap<V> {
     private static final int MINIMUM_SIZE = 8;
 
     // Unless the hash function is really unbalanced, most things should fit within small 8-element buckets
@@ -34,11 +33,11 @@ public class SimpleIntHashMap<V> {
     private int mask;
     private final float loadFactor;
 
-    public SimpleIntHashMap(int initialSize) {
+    public PrimitiveIntHashMap(int initialSize) {
         this(initialSize, DEFAULT_LOAD_FACTOR);
     }
 
-    public SimpleIntHashMap(int initialSize, float loadFactor) {
+    public PrimitiveIntHashMap(int initialSize, float loadFactor) {
         this.loadFactor = loadFactor;
         size = 0;
         setNewSize(initialSize);
