@@ -12,7 +12,7 @@ import java.util.Map;
 public class SimpleIntHashMapTests {
     public static void main(String[] args) {
         HashMap<WorldPoint, List<Transport>> transports = Transport.loadAllFromResources();
-        SimpleIntHashMap<List<Transport>> map = new SimpleIntHashMap<>(10);
+        SimpleIntHashMap<List<Transport>> map = new SimpleIntHashMap<>(16);
         for (Map.Entry<WorldPoint, List<Transport>> entry : transports.entrySet()) {
             int packedPoint = WorldPointUtil.packWorldPoint(entry.getKey());
             map.put(packedPoint, entry.getValue());

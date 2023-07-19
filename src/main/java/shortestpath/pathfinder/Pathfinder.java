@@ -10,7 +10,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import lombok.Getter;
 import net.runelite.api.coords.WorldPoint;
-import shortestpath.SimpleIntHashMap;
 import shortestpath.WorldPointUtil;
 
 public class Pathfinder implements Runnable {
@@ -91,7 +90,6 @@ public class Pathfinder implements Runnable {
 
     @Override
     public void run() {
-        long startTime = System.nanoTime();
         boundary.addFirst(new Node(start, null));
 
         int bestDistance = Integer.MAX_VALUE;
@@ -138,7 +136,5 @@ public class Pathfinder implements Runnable {
         boundary.clear();
         visited.clear();
         pending.clear();
-        long endTime = System.nanoTime();
-        System.out.println("Time: " + ((endTime - startTime) / 1000000.0) + "ms");
     }
 }

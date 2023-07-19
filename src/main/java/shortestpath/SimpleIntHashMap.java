@@ -3,46 +3,59 @@ package shortestpath;
 import java.lang.reflect.Array;
 import java.util.Arrays;
 
+// This class is not intended as a general purpose replacement for a hashmap; it lacks convenience features
+// found in regular maps and has no way to remove elements or get a list of keys/values.
 public class SimpleIntHashMap<V> {
+    // Unless the hash function is really unbalanced, most things should fit within small 4-element buckets
+    // Buckets will grow as needed without forcing a rehash of the whole map
+    private final int DEFAULT_BUCKET_SIZE = 4;
+
+    // The larger the value, the less often rehashing needs to be done, but the more space the map requires
+    private final float GROWTH_RATE = 2.0f;
+
+    // How full the map should get before growing it again. Smaller values speed up lookup times at the expense of space
+    private final float DEFAULT_LOAD_FACTOR = 0.75f;
+
     private class IntNode<V> {
         private int key;
         private V value;
 
-        IntNode(int key, V value) {
+        private IntNode(int key, V value) {
             this.key = key;
             this.value = value;
         }
     }
 
-    // This is just a container to get around Java's generic cast constraints
-    // If buckets become too large then it may be worth converting to linked-list and turn buckets into a balanced tree
+    // This is just a container to get around Java's generic cast constraints. If buckets become too large then
+    // it may be worth converting large buckets into an array-backed binary tree
     private class Bucket {
-        IntNode<V>[] values;
-        Bucket(int size) {
+        private IntNode<V>[] values;
+
+        private Bucket(int size) {
             @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
             IntNode<V>[] temp = (IntNode<V>[])Array.newInstance(IntNode.class, size);
             values = temp;
         }
     }
-
     private Bucket[] buckets;
     private int size;
     private int capacity;
-    private int bucketSize = 8;
     private long maxSize;
     private final float loadFactor;
 
     public SimpleIntHashMap(int initialSize) {
+        loadFactor = DEFAULT_LOAD_FACTOR;
         size = 0;
-        loadFactor = 0.5f;
-        setNewCapacity(initialSize);
+        maxSize = initialSize;
+        capacity = calculateCapacity();
         recreateArrays();
     }
 
     public SimpleIntHashMap(int initialSize, float loadFactor) {
-        size = 0;
         this.loadFactor = loadFactor;
-        setNewCapacity(initialSize);
+        size = 0;
+        maxSize = initialSize;
+        growCapacity();
         recreateArrays();
     }
 
@@ -64,7 +77,6 @@ public class SimpleIntHashMap<V> {
             if (bucket.values[i] == null) {
                 break;
             }
-
             if (bucket.values[i].key == key) {
                 return i;
             }
@@ -75,12 +87,7 @@ public class SimpleIntHashMap<V> {
     }
 
     public V get(int key) {
-        int bucket = getBucket(key);
-        int index = bucketIndex(key, bucket);
-        if (index == -1) {
-            return null;
-        }
-        return buckets[bucket].values[index].value;
+        return getOrDefault(key, null);
     }
 
     public V getOrDefault(int key, V defaultValue) {
@@ -98,7 +105,7 @@ public class SimpleIntHashMap<V> {
 
         if (bucket == null) {
             @SuppressWarnings({"unchecked", "SuspiciousArrayCast"})
-            Bucket newBucket = new Bucket(bucketSize);
+            Bucket newBucket = new Bucket(DEFAULT_BUCKET_SIZE);
             IntNode<V> newNode = new IntNode<>(key, value);
             newBucket.values[0] = newNode;
             buckets[bucketIndex] = newBucket;
@@ -110,38 +117,30 @@ public class SimpleIntHashMap<V> {
             if (bucket.values[i] == null) {
                 IntNode<V> newNode = new IntNode<>(key, value);
                 bucket.values[i] = newNode;
+                incrementSize();
                 return null;
             } else if (bucket.values[i].key == key) {
                 V previous = bucket.values[i].value;
                 bucket.values[i].value = value;
+                incrementSize();
                 return previous;
             }
         }
 
         // No space in the bucket, grow it
         growBucket(bucketIndex).values[bucket.values.length] = new IntNode<>(key, value);
+        incrementSize();
         return null;
     }
 
     private void incrementSize() {
         size++;
         if (size >= capacity) {
-            grow();
+            rehash();
         }
     }
 
-    private long calculateMaxSize(int newCapacity) {
-        return (long)Math.ceil((2.0f - loadFactor) * newCapacity);
-    }
-
-    private void setNewCapacity(int newCapacity) {
-        maxSize = calculateMaxSize(newCapacity);
-        if (maxSize >= Integer.MAX_VALUE) {
-            throw new IllegalStateException("New size is larger than max array size");
-        }
-        capacity = newCapacity;
-    }
-
+    // Ideally the map should grow before buckets do, but just in-case
     private Bucket growBucket(int bucketIndex) {
         Bucket oldBucket = buckets[bucketIndex];
         Bucket newBucket = new Bucket(oldBucket.values.length * 2);
@@ -150,8 +149,22 @@ public class SimpleIntHashMap<V> {
         return newBucket;
     }
 
-    private void grow() {
-        setNewCapacity((int)maxSize);
+    private int calculateCapacity() {
+        return (int)(maxSize * loadFactor);
+    }
+
+    private void growCapacity() {
+        maxSize = (long)(maxSize * GROWTH_RATE);
+        if (maxSize >= Integer.MAX_VALUE) {
+            throw new IllegalStateException("Hashmap size is larger than max array size");
+        }
+
+        capacity = calculateCapacity();
+    }
+
+    // Grow the bucket array then rehash all the values into new buckets and discard the old ones
+    private void rehash() {
+        growCapacity();
 
         Bucket[] oldBuckets = buckets;
         recreateArrays();
@@ -167,10 +180,11 @@ public class SimpleIntHashMap<V> {
                     break;
                 }
 
-                int bucketIndex = getBucket(ind);
+                int bucketIndex = getBucket(oldBucket.values[ind].key);
                 Bucket newBucket = buckets[bucketIndex];
                 if (newBucket == null) {
-                    newBucket = new Bucket(bucketSize);
+                    newBucket = new Bucket(DEFAULT_BUCKET_SIZE);
+                    newBucket.values[0] = oldBucket.values[ind];
                     buckets[bucketIndex] = newBucket;
                 } else {
                     int bInd;
@@ -183,7 +197,6 @@ public class SimpleIntHashMap<V> {
 
                     if (bInd >= newBucket.values.length) {
                         growBucket(bucketIndex).values[newBucket.values.length] = oldBucket.values[ind];
-
                         return;
                     }
                 }
