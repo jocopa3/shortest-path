@@ -225,7 +225,7 @@ public class ShortestPathPlugin extends Plugin {
 
         if (pathManager != null) {
             pathManager.shutDown();
-            // Don't clear the reference in-case users re-enables shortest path later
+            // Don't clear the reference in-case the user re-enables shortest path later
         }
 
         clientToolbar.removeNavigation(navigationButton);
@@ -318,20 +318,21 @@ public class ShortestPathPlugin extends Plugin {
     @Subscribe
     public void onGameTick(GameTick tick) {
         Player localPlayer = client.getLocalPlayer();
-        if (localPlayer == null || pathfinder == null) {
+        PathParameters currentParameters = pathManager.getCurrentParameters();
+        if (localPlayer == null || pathfinder == null || currentParameters == null) {
             return;
         }
 
         WorldPoint currentLocation = client.isInInstancedRegion() ?
             WorldPoint.fromLocalInstance(client, localPlayer.getLocalLocation()) : localPlayer.getWorldLocation();
         if (currentLocation.distanceTo(pathfinder.getTarget()) < config.reachedDistance()) {
-            clearPath(selfIdentifier);
+            clearPath(currentParameters.getRequester());
             return;
         }
 
         if (!isStartSet() && !isNearPath(currentLocation)) {
             if (config.cancelInstead()) {
-                clearPath(selfIdentifier);
+                clearPath(currentParameters.getRequester());
                 return;
             }
             restartPathfinding(currentLocation, pathfinder.getTarget());
@@ -487,14 +488,18 @@ public class ShortestPathPlugin extends Plugin {
     }
 
     public void clearPath(PluginIdentifier requester) {
-        PathParameters newCurrentPath = pathManager.clearPath(requester);
-        if (newCurrentPath != null) {
-            requestPath(newCurrentPath);
-            return;
+        boolean currentParametersChanged = pathManager.clearPath(requester);
+        pluginPanel.repaintAsync();
+
+        if (currentParametersChanged) {
+            PathParameters newCurrentParameters = pathManager.getCurrentParameters();
+            if (newCurrentParameters != null) {
+                setPath(newCurrentParameters);
+            } else {
+                cancelPathfinding();
+            }
         }
 
-        cancelPathfinding();
-        pluginPanel.repaintAsync();
     }
 
     public void requestPath(PathParameters parameters) {
@@ -502,23 +507,27 @@ public class ShortestPathPlugin extends Plugin {
             return;
         }
 
-        boolean currentPathChanged = pathManager.requestPath(parameters);
+        boolean currentParametersChanged = pathManager.requestPath(parameters);
         pluginPanel.repaintAsync();
 
-        if (!currentPathChanged) {
+        if (!currentParametersChanged) {
             return;
         }
 
-        PathParameters currentPath = pathManager.getCurrentParameters();
-        if (currentPath == null) {
+        PathParameters currentParameters = pathManager.getCurrentParameters();
+        if (currentParameters == null) {
             cancelPathfinding();
             return;
         }
 
-        setPath(currentPath);
+        setPath(currentParameters);
     }
 
     private void setPath(PathParameters parameters) {
+        if (parameters == null) {
+            return;
+        }
+
         Player localPlayer = client.getLocalPlayer();
         if (!parameters.isStartSet() && localPlayer == null) {
             return;
@@ -544,8 +553,10 @@ public class ShortestPathPlugin extends Plugin {
     }
 
     void setNewPriorities(List<PluginIdentifier> newPriorities) {
-        // Manually update the current path after setting the new plugin priority order
-        requestPath(pathManager.setNewPriorities(newPriorities));
+        if (pathManager.setNewPriorities(newPriorities)) {
+            // Priority order changed; no need to re-request the path
+            setPath(pathManager.getCurrentParameters());
+        }
     }
 
     public WorldPoint calculateMapPoint(Point point) {

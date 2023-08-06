@@ -1,5 +1,6 @@
 package shortestpath;
 
+import lombok.Getter;
 import lombok.NonNull;
 
 import java.util.ArrayList;
@@ -9,21 +10,16 @@ import java.util.Map;
 import java.util.Objects;
 
 public class PluginPathManager {
+    @Getter
     private List<PluginIdentifier> pluginPriorities;
     private Map<PluginIdentifier, PathParameters> pluginMap;
-    private PathParameters currentPath;
+
+    @Getter
+    private PathParameters currentParameters;
 
     PluginPathManager() {
         pluginPriorities = new ArrayList<>(32);
         pluginMap = new HashMap<>(32);
-    }
-
-    public PathParameters getCurrentParameters() {
-        return currentPath;
-    }
-
-    public List<PluginIdentifier> getPluginPriorities() {
-        return pluginPriorities;
     }
 
     public PathParameters getParameters(PluginIdentifier pluginIdentifier) {
@@ -36,14 +32,15 @@ public class PluginPathManager {
         }
     }
 
-    public void removePlugin(PluginIdentifier pluginIdentifier) {
+    public boolean removePlugin(PluginIdentifier pluginIdentifier) {
         pluginPriorities.remove(pluginIdentifier);
         pluginMap.remove(pluginIdentifier);
+        return refreshCurrentParameters();
     }
 
-    // Returns true if the current path was changed
+    // Returns true if the current parameters changed
     public boolean requestPath(PathParameters parameters) {
-        if (Objects.equals(currentPath, parameters)) {
+        if (Objects.equals(currentParameters, parameters)) {
             return false;
         }
 
@@ -53,28 +50,33 @@ public class PluginPathManager {
             pluginPriorities.add(parameters.getRequester());
         }
 
-        PathParameters oldPath = currentPath;
-        currentPath = getHighestPriorityPath();
-        return !Objects.equals(oldPath, currentPath);
+        return refreshCurrentParameters();
     }
 
-    // Current path will become stale; the caller is expected to request the newly returned path
-    PathParameters setNewPriorities(@NonNull List<PluginIdentifier> priorities) {
+    // Returns true if the current parameters changed
+    boolean setNewPriorities(@NonNull List<PluginIdentifier> priorities) {
         if (priorities.size() != pluginPriorities.size()) {
             throw new IllegalArgumentException("new priorities size must match");
         }
 
         pluginPriorities = priorities;
-        return getHighestPriorityPath();
+        return refreshCurrentParameters();
     }
 
-    // Current path will become stale; the caller is expected to request the newly returned path
-    PathParameters clearPath(PluginIdentifier requester) {
+    // Returns true if the current parameters changed
+    boolean clearPath(PluginIdentifier requester) {
         pluginMap.remove(requester);
-        return getHighestPriorityPath();
+        return refreshCurrentParameters();
     }
 
-    private PathParameters getHighestPriorityPath() {
+    // Returns true if the current parameters changed
+    private boolean refreshCurrentParameters() {
+        PathParameters oldParameters = currentParameters;
+        currentParameters = getHighestPriorityParameters();
+        return !Objects.equals(oldParameters, currentParameters);
+    }
+
+    private PathParameters getHighestPriorityParameters() {
         for (int i = 0; i < pluginPriorities.size(); ++i) {
             PathParameters parameters = pluginMap.get(pluginPriorities.get(i));
             if (parameters != null && parameters.isVisible()) {
