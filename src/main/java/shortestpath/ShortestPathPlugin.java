@@ -341,7 +341,9 @@ public class ShortestPathPlugin extends Plugin {
                 }
                 return;
             case "debugPathfinding":
-                restartPathfinding(pathfinder.getStart(), pathfinder.getTarget());
+                if (pathfinder != null) {
+                    restartPathfinding(pathfinder.getStart(), pathfinder.getTarget());
+                }
                 return;
             case "debugPathfindingDelay":
                 if (config.debugPathfinding() && debugTimerTask != null) {
