@@ -39,6 +39,8 @@ public class PathfinderConfig {
     private long calculationCutoffMillis;
     @Getter
     private boolean avoidWilderness;
+    @Getter
+    private boolean debugPathfinding;
     private boolean useAgilityShortcuts,
         useGrappleShortcuts,
         useBoats,
@@ -86,6 +88,7 @@ public class PathfinderConfig {
         useGnomeGliders = config.useGnomeGliders();
         useTeleportationLevers = config.useTeleportationLevers();
         useTeleportationPortals = config.useTeleportationPortals();
+        debugPathfinding = config.debugPathfinding();
 
         if (GameState.LOGGED_IN.equals(client.getGameState())) {
             agilityLevel = client.getBoostedSkillLevel(Skill.AGILITY);

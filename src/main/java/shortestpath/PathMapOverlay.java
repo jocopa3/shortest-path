@@ -6,6 +6,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.Stroke;
 import java.awt.geom.Area;
 import java.util.ArrayList;
 import java.util.List;
@@ -14,12 +15,15 @@ import net.runelite.api.Point;
 import net.runelite.api.coords.WorldPoint;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.widgets.WidgetInfo;
+import net.runelite.api.worldmap.WorldMap;
 import net.runelite.client.ui.overlay.Overlay;
 import net.runelite.client.ui.overlay.OverlayLayer;
 import net.runelite.client.ui.overlay.OverlayPosition;
 import net.runelite.client.ui.overlay.OverlayPriority;
 import net.runelite.client.ui.overlay.worldmap.WorldMapOverlay;
 import shortestpath.pathfinder.CollisionMap;
+import shortestpath.pathfinder.Pathfinder;
+import shortestpath.pathfinder.WorldPointPair;
 
 public class PathMapOverlay extends Overlay {
     private final Client client;
@@ -59,7 +63,7 @@ public class PathMapOverlay extends Overlay {
             final CollisionMap map = plugin.getMap();
             final int z = client.getPlane();
             for (int x = extent.x; x < (extent.x + extent.width + 1); x++) {
-                for (int y = extent.y - extent.height; y < (extent.y + 1); y++) {
+                for (int y = extent.y; y < (extent.y + extent.height + 1); y++) {
                     if (map.isBlocked(x, y, z)) {
                         drawOnMap(graphics, new WorldPoint(x, y, z), false);
                     }
@@ -86,17 +90,22 @@ public class PathMapOverlay extends Overlay {
             }
         }
 
-        if (plugin.getPathfinder() != null) {
-            Color colour = plugin.getPathfinder().isDone() ? config.colourPath() : config.colourPathCalculating();
-            List<WorldPoint> path = plugin.getPathfinder().getPath();
-            for (int i = 0; i < path.size(); i++) {
-                graphics.setColor(colour);
-                WorldPoint point = path.get(i);
-                WorldPoint last = (i > 0) ? path.get(i - 1) : point;
-                if (point.distanceTo(last) > 1) {
-                    drawOnMap(graphics, last, point, true);
+        Pathfinder pathfinder = plugin.getPathfinder();
+        if (pathfinder != null) {
+            if (config.debugPathfinding()) {
+                drawDebug(graphics, pathfinder);
+            } else {
+                Color colour = pathfinder.isDone() ? config.colourPath() : config.colourPathCalculating();
+                List<WorldPoint> path = pathfinder.getPath();
+                for (int i = 0; i < path.size(); i++) {
+                    graphics.setColor(colour);
+                    WorldPoint point = path.get(i);
+                    WorldPoint last = (i > 0) ? path.get(i - 1) : point;
+                    if (point.distanceTo(last) > 1) {
+                        drawOnMap(graphics, last, point, true);
+                    }
+                    drawOnMap(graphics, point, true);
                 }
-                drawOnMap(graphics, point, true);
             }
         }
 
@@ -157,6 +166,78 @@ public class PathMapOverlay extends Overlay {
         WorldPoint topLeft = plugin.calculateMapPoint(new Point(baseRectangle.x, baseRectangle.y));
         WorldPoint bottomRight = plugin.calculateMapPoint(
             new Point(baseRectangle.x + baseRectangle.width, baseRectangle.y + baseRectangle.height));
-        return new Rectangle(topLeft.getX(), topLeft.getY(), bottomRight.getX() - topLeft.getX(), topLeft.getY() - bottomRight.getY());
+        return new Rectangle(topLeft.getX(), bottomRight.getY(), bottomRight.getX() - topLeft.getX(), topLeft.getY() - bottomRight.getY());
+    }
+
+    private final Stroke lineStroke = new BasicStroke();
+    private void drawLine(Graphics2D graphics, WorldPoint startPoint, WorldPoint endPoint) {
+        Point start = plugin.mapWorldPointToGraphicsPoint(startPoint);
+        Point end = plugin.mapWorldPointToGraphicsPoint(endPoint);
+
+        if (start == null || end == null) {
+            return;
+        }
+
+        graphics.setStroke(lineStroke);
+        graphics.drawLine(start.getX(), start.getY(), end.getX(), end.getY());
+    }
+
+    private void drawSquare(Graphics2D graphics, WorldPoint point) {
+        WorldMap worldMap = client.getWorldMap();
+
+        Point start = plugin.mapWorldPointToGraphicsPoint(point);
+        if (start == null) {
+            return;
+        }
+
+        int x = start.getX();
+        int y = start.getY();
+        final int pixelsPerTile = (int)worldMap.getWorldMapZoom();
+        final int width = pixelsPerTile;
+        final int height = pixelsPerTile;
+        x -= width / 2;
+        y -= height / 2;
+
+        graphics.fillRect(x, y, width, height);
+    }
+
+    private void drawDebug(Graphics2D graphics, Pathfinder pathfinder) {
+        List<WorldPointPair> edges = pathfinder.getEdges();
+        if (pathfinder.isActive() || pathfinder.isCancelled() || edges == null) {
+            return;
+        }
+
+        graphics.setColor(config.colourPathCalculating());
+        Rectangle extent = getWorldMapExtent(client.getWidget(WidgetInfo.WORLD_MAP_VIEW).getBounds());
+        extent.setSize(extent.width + 1, extent.height + 1); // Fit the edges
+
+        final int plane = client.getPlane();
+        for (int i = 0; i < edges.size(); ++i) {
+            WorldPointPair edge = edges.get(i);
+            WorldPoint start = edge.getStartPoint();
+            WorldPoint end = edge.getEndPoint();
+            if (
+                    start.getPlane() != plane
+                    || end.getPlane() != plane
+                    || !(extent.contains(start.getX(), start.getY()) || extent.contains(end.getX(), end.getY()))
+            ) {
+                continue;
+            }
+
+            if (edge.getDistance() <= 1) {
+                drawLine(graphics, start, end);
+            }
+        }
+
+        graphics.setColor(config.colourPath());
+        List<WorldPoint> path = pathfinder.getPath();
+        for (int i = path.size() - 1; i > 0; --i) {
+            WorldPoint end = path.get(i);
+            WorldPoint start = path.get(i - 1);
+            drawLine(graphics, start, end);
+        }
+
+        graphics.setColor(config.colourPath());
+        drawSquare(graphics, pathfinder.getTarget());
     }
 }

@@ -16,6 +16,8 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -134,6 +136,7 @@ public class ShortestPathPlugin extends Plugin {
     private BufferedImage minimapSpriteResizeable;
     private Rectangle minimapRectangle = new Rectangle();
 
+    private Timer debugTimerTask;
     private ExecutorService pathfindingExecutor;
     private Future<?> pathfinderFuture;
     private final Object pathfinderMutex = new Object();
@@ -231,11 +234,42 @@ public class ShortestPathPlugin extends Plugin {
         clientToolbar.removeNavigation(navigationButton);
     }
 
+    private void createDebugTimer() {
+        synchronized (pathfinderMutex) {
+            if (debugTimerTask != null) {
+                debugTimerTask.cancel();
+            }
+
+            debugTimerTask = new Timer();
+            debugTimerTask.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+                    synchronized (pathfinderMutex) {
+                        if (pathfinder.isDone()) {
+                            debugTimerTask.cancel();
+                            return;
+                        }
+
+                        if (config.debugPathfinding() && pathfinder != null && !pathfinder.isDone() && !pathfinder.isCancelled()) {
+                            pathfinder.debugStep();
+                            if (!pathfinder.isActive()) {
+                                pathfindingExecutor.submit(pathfinder);
+                            }
+                        }
+                    }
+                }
+            }, config.debugPathfindingDelayMS(), config.debugPathfindingDelayMS());
+        }
+    }
+
     public void restartPathfinding(WorldPoint start, WorldPoint end) {
         synchronized (pathfinderMutex) {
             if (pathfinder != null) {
                 pathfinder.cancel();
                 pathfinderFuture.cancel(true);
+                if (debugTimerTask != null) {
+                    debugTimerTask.cancel();
+                }
             }
 
             if (pathfindingExecutor == null) {
@@ -245,6 +279,10 @@ public class ShortestPathPlugin extends Plugin {
                     return thread;
                 });
             }
+
+            if (config.debugPathfinding() && debugTimerTask == null) {
+                debugTimerTask = new Timer();
+            }
         }
 
         getClientThread().invokeLater(() -> {
@@ -253,6 +291,7 @@ public class ShortestPathPlugin extends Plugin {
                 pathfinder = new Pathfinder(pathfinderConfig, start, end);
                 pathfinderFuture = pathfindingExecutor.submit(pathfinder);
             }
+            createDebugTimer();
         });
     }
 
@@ -293,13 +332,23 @@ public class ShortestPathPlugin extends Plugin {
             return;
         }
 
-        if ("drawDebugPanel".equals(event.getKey())) {
-            if (config.drawDebugPanel()) {
-                overlayManager.add(debugOverlayPanel);
-            } else {
-                overlayManager.remove(debugOverlayPanel);
-            }
-            return;
+        switch (event.getKey()) {
+            case "drawDebugPanel":
+                if (config.drawDebugPanel()) {
+                    overlayManager.add(debugOverlayPanel);
+                } else {
+                    overlayManager.remove(debugOverlayPanel);
+                }
+                return;
+            case "debugPathfinding":
+                restartPathfinding(pathfinder.getStart(), pathfinder.getTarget());
+                return;
+            case "debugPathfindingDelay":
+                if (config.debugPathfinding() && debugTimerTask != null) {
+                    debugTimerTask.cancel();
+                    createDebugTimer();
+                }
+                return;
         }
 
         // Transport option changed; rerun pathfinding
@@ -479,7 +528,7 @@ public class ShortestPathPlugin extends Plugin {
     private void setTarget(PluginIdentifier requester, WorldPoint target) {
         PathParameters parameters = pathManager.getParameters(requester);
         if (parameters == null) {
-            parameters = new PathParameters(requester, null, target, false, true);
+            parameters = new PathParameters(requester, null, target, config.debugPathfinding(), true);
         } else {
             parameters = new PathParameters(requester, parameters.getStart(), target, parameters.isMarkerHidden(), parameters.isVisible());
         }

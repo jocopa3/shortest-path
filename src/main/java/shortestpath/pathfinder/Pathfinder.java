@@ -1,11 +1,13 @@
 package shortestpath.pathfinder;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import lombok.Getter;
 import net.runelite.api.coords.WorldPoint;
@@ -33,10 +35,18 @@ public class Pathfinder implements Runnable {
     private final Queue<Node> pending = new PriorityQueue<>(256);
     private final VisitedTiles visited;
 
+    @Getter
+    private List<WorldPointPair> edges;
+
     @SuppressWarnings("unchecked") // Casting EMPTY_LIST is safe here
     private List<WorldPoint> path = (List<WorldPoint>)Collections.EMPTY_LIST;
     private boolean pathNeedsUpdate = false;
     private Node bestLastNode;
+
+    private AtomicInteger maxStep = new AtomicInteger(Integer.MAX_VALUE);
+
+    @Getter
+    private volatile boolean active = false;
 
     public Pathfinder(PathfinderConfig config, WorldPoint start, WorldPoint target) {
         stats = new PathfinderStats();
@@ -47,10 +57,29 @@ public class Pathfinder implements Runnable {
         visited = new VisitedTiles(map);
         targetPacked = WorldPointUtil.packWorldPoint(target);
         targetInWilderness = PathfinderConfig.isInWilderness(target);
+
+        if (config.isDebugPathfinding()) {
+            maxStep.set(1);
+            edges = new ArrayList<>(1 << 19);
+        }
+    }
+
+    public void debugStep() {
+        if (config.isDebugPathfinding()) {
+            maxStep.incrementAndGet();
+        }
+    }
+
+    public int getStep() {
+        return maxStep.get();
     }
 
     public boolean isDone() {
         return done;
+    }
+
+    public boolean isCancelled() {
+        return cancelled;
     }
 
     public void cancel() {
@@ -84,6 +113,10 @@ public class Pathfinder implements Runnable {
         List<Node> nodes = map.getNeighbors(node, visited, config);
         for (int i = 0; i < nodes.size(); ++i) {
             Node neighbor = nodes.get(i);
+            if (edges != null) {
+                edges.add(new WorldPointPair(node.packedPosition, neighbor.packedPosition, node.cost));
+            }
+
             if (neighbor.packedPosition == targetPacked) {
                 return neighbor;
             }
@@ -105,20 +138,29 @@ public class Pathfinder implements Runnable {
         return null;
     }
 
+    private int bestDistance = Integer.MAX_VALUE;
+    private long bestHeuristic = Integer.MAX_VALUE;
+
     @Override
     public void run() {
+        active = true;
         stats.start();
         boundary.addFirst(new Node(start, null));
 
-        int bestDistance = Integer.MAX_VALUE;
-        long bestHeuristic = Integer.MAX_VALUE;
         long cutoffDurationMillis = config.getCalculationCutoffMillis();
         long cutoffTimeMillis = System.currentTimeMillis() + cutoffDurationMillis;
 
+        boolean debugBreak = false;
+        final int nextStep = maxStep.get();
+
         while (!cancelled && (!boundary.isEmpty() || !pending.isEmpty())) {
             Node node = boundary.peekFirst();
-            Node p = pending.peek();
+            if (node != null && node.cost > nextStep) {
+                debugBreak = true;
+                break;
+            }
 
+            Node p = pending.peek();
             if (p != null && (node == null || p.cost < node.cost)) {
                 boundary.addFirst(p);
                 pending.poll();
@@ -154,13 +196,16 @@ public class Pathfinder implements Runnable {
             }
         }
 
-        done = !cancelled;
+        if (!debugBreak) {
+            done = !cancelled;
 
-        boundary.clear();
-        visited.clear();
-        pending.clear();
+            boundary.clear();
+            visited.clear();
+            pending.clear();
+            stats.end(); // Include cleanup in stats to get the total cost of pathfinding
+        }
 
-        stats.end(); // Include cleanup in stats to get the total cost of pathfinding
+        active = false;
     }
 
     public static class PathfinderStats {
@@ -178,6 +223,10 @@ public class Pathfinder implements Runnable {
         }
 
         private void start() {
+            if (started) {
+                return;
+            }
+
             started = true;
             nodesChecked = 0;
             transportsChecked = 0;
@@ -185,6 +234,10 @@ public class Pathfinder implements Runnable {
         }
 
         private void end() {
+            if (ended) {
+                return;
+            }
+
             endNanos = System.nanoTime();
             ended = true;
         }

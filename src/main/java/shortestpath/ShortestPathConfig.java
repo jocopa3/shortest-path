@@ -386,10 +386,39 @@ public interface ShortestPathConfig extends Config {
     }
 
     @ConfigItem(
+        keyName = "debugPathfinding",
+        name = "Debug Pathfinding",
+        description = "Debug Pathfinding",
+        position = 33,
+        section = sectionDebug
+    )
+    default boolean debugPathfinding() {
+        return false;
+    }
+
+    @Units(
+            value = Units.MILLISECONDS
+    )
+    @Range(
+            min = 1,
+            max = 10000
+    )
+    @ConfigItem(
+        keyName = "debugPathfindingDelay",
+        name = "Debug Pathfinding Delay",
+        description = "Debug Pathfinding Delay",
+        position = 34,
+        section = sectionDebug
+    )
+    default int debugPathfindingDelayMS() {
+        return 300;
+    }
+
+    @ConfigItem(
         keyName = "drawDebugPanel",
         name = "Show debug panel",
         description = "Toggles displaying the pathfinding debug stats panel",
-        position = 33,
+        position = 35,
         section = sectionDebug
     )
     default boolean drawDebugPanel() {

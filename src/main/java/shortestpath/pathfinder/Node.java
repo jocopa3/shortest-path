@@ -11,24 +11,22 @@ public class Node {
     public final Node previous;
     public final int cost;
 
-    public Node(WorldPoint position, Node previous, int wait) {
-        this.packedPosition = WorldPointUtil.packWorldPoint(position);
-        this.previous = previous;
-        this.cost = cost(previous, wait);
-    }
-
     public Node(WorldPoint position, Node previous) {
         this(position, previous, 0);
+    }
+
+    public Node(WorldPoint position, Node previous, int wait) {
+        this(WorldPointUtil.packWorldPoint(position), previous, wait);
+    }
+
+    public Node(int packedPosition, Node previous) {
+        this(packedPosition, previous, 0);
     }
 
     public Node(int packedPosition, Node previous, int wait) {
         this.packedPosition = packedPosition;
         this.previous = previous;
         this.cost = cost(previous, wait);
-    }
-
-    public Node(int packedPosition, Node previous) {
-        this(packedPosition, previous, 0);
     }
 
     public List<WorldPoint> getPath() {
