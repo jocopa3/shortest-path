@@ -1,6 +1,8 @@
 package shortestpath;
 
 import java.util.Arrays;
+import java.util.ConcurrentModificationException;
+import java.util.Iterator;
 
 // This class is not intended as a general purpose replacement for a hashmap; it lacks convenience features
 // found in regular maps and has no way to remove elements or get a list of keys/values.
@@ -235,5 +237,60 @@ public class PrimitiveIntHashMap<V> {
     public void clear() {
         size = 0;
         Arrays.fill(buckets, null);
+    }
+
+    public Iterator<V> iterator() {
+        return new PrimitiveMapIterator<>(this);
+    }
+
+    private static class PrimitiveMapIterator<V> implements Iterator<V> {
+        private PrimitiveIntHashMap<V> map;
+        private final int initialSize;
+        private int bucketIndex = -1;
+        private int bucket = -1;
+
+        private PrimitiveMapIterator(PrimitiveIntHashMap<V> map) {
+            this.map = map;
+            initialSize = map.size();
+            searchForNextBucket();
+            incrementBucketIndex();
+        }
+
+        private void searchForNextBucket() {
+            do {
+                ++bucket;
+            } while (bucket < map.buckets.length && map.buckets[bucket] == null);
+        }
+
+        private boolean incrementBucketIndex() {
+            ++bucketIndex;
+            if (bucket < 0 || bucket >= map.buckets.length || bucketIndex == map.buckets[bucket].length || map.buckets[bucket][bucketIndex] == null) {
+                return false;
+            }
+
+            return true;
+        }
+
+        @Override
+        public boolean hasNext() {
+            return bucket >= 0 && bucket < map.buckets.length && map.buckets[bucket] != null && bucketIndex >= 0 && bucketIndex < map.buckets[bucket].length;
+        }
+
+        @Override
+        public V next() {
+            if (map.size() != initialSize) {
+                throw new ConcurrentModificationException("Map was modified during iteration");
+            }
+
+            V node = map.buckets[bucket][bucketIndex].value;
+
+            if (!incrementBucketIndex()) {
+                bucketIndex = -1;
+                searchForNextBucket();
+                incrementBucketIndex();
+            }
+
+            return node;
+        }
     }
 }

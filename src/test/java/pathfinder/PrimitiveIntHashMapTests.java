@@ -8,6 +8,7 @@ import shortestpath.Transport;
 import shortestpath.WorldPointUtil;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +47,23 @@ public class PrimitiveIntHashMapTests {
         for (int i = 0; i < 1024; ++i) {
             Assert.assertEquals(i, map.get(i).intValue());
         }
+    }
+
+    @Test
+    public void testIterator() {
+        PrimitiveIntHashMap<Integer> map = new PrimitiveIntHashMap<>(8);
+        int totalRef = 0;
+        for (int i = 0; i < 1024; totalRef += i++) {
+            map.put(i * 46993747, i);
+        }
+
+        int totalMap = 0;
+        Iterator<Integer> iter = map.iterator();
+        while (iter.hasNext()) {
+            totalMap += iter.next().intValue();
+        }
+
+        Assert.assertEquals(totalRef, totalMap);
     }
 
     @Test
