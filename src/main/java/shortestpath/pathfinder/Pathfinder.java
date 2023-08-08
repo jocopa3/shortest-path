@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import lombok.Getter;
 import net.runelite.api.coords.WorldPoint;
+import shortestpath.PrimitiveIntHashMap;
 import shortestpath.WorldPointUtil;
 
 public class Pathfinder implements Runnable {
@@ -37,6 +38,8 @@ public class Pathfinder implements Runnable {
 
     @Getter
     private List<WorldPointPair> edges;
+    @Getter
+    private PrimitiveIntHashMap<WorldPointPair> edgesMap;
 
     @SuppressWarnings("unchecked") // Casting EMPTY_LIST is safe here
     private List<WorldPoint> path = (List<WorldPoint>)Collections.EMPTY_LIST;
@@ -58,14 +61,20 @@ public class Pathfinder implements Runnable {
         targetPacked = WorldPointUtil.packWorldPoint(target);
         targetInWilderness = PathfinderConfig.isInWilderness(target);
 
-        if (config.isDebugPathfinding()) {
-            maxStep.set(1);
-            edges = new ArrayList<>(1 << 19);
+        switch (config.getDebugPathfindingMode()) {
+            case TREE:
+                maxStep.set(1);
+                edges = new ArrayList<>(128);
+                break;
+            case DEAD_ENDS:
+                maxStep.set(1);
+                edgesMap = new PrimitiveIntHashMap<>(128);
+                break;
         }
     }
 
     public void debugStep() {
-        if (config.isDebugPathfinding()) {
+        if (config.isDebuggingPathfinding()) {
             maxStep.incrementAndGet();
         }
     }
@@ -109,13 +118,30 @@ public class Pathfinder implements Runnable {
         return path;
     }
 
+    private void markDeadEnds(Node node) {
+        if (edgesMap == null) return;
+        while (node != null && node.previous != null && node.getChildren() == node.getDeadEnds()) {
+            edgesMap.put(node.packedPosition, new WorldPointPair(node.packedPosition, node.previous.packedPosition, 0xFF0000FF));
+            node = node.previous;
+            node.deadEnds++;
+        }
+    }
+
+    private void addDebugEdge(Node start, Node end) {
+        if (edges != null) {
+            WorldPointPair edge = new WorldPointPair(start.packedPosition, end.packedPosition, end.cost);
+            edges.add(edge);
+        } else if (edgesMap != null) {
+            WorldPointPair edge = new WorldPointPair(start.packedPosition, end.packedPosition, 0xFFFF0000);
+            edgesMap.put(end.packedPosition, edge);
+        }
+    }
+
     private Node addNeighbors(Node node) {
         List<Node> nodes = map.getNeighbors(node, visited, config);
         for (int i = 0; i < nodes.size(); ++i) {
             Node neighbor = nodes.get(i);
-            if (edges != null) {
-                edges.add(new WorldPointPair(node.packedPosition, neighbor.packedPosition, node.cost));
-            }
+            addDebugEdge(node, neighbor);
 
             if (neighbor.packedPosition == targetPacked) {
                 return neighbor;
@@ -135,11 +161,21 @@ public class Pathfinder implements Runnable {
             }
         }
 
+        if (nodes.isEmpty()) {
+            markDeadEnds(node);
+        }
+
         return null;
     }
 
     private int bestDistance = Integer.MAX_VALUE;
     private long bestHeuristic = Integer.MAX_VALUE;
+
+    private void updateBestNode(Node node) {
+        markDeadEnds(bestLastNode);
+        bestLastNode = node;
+        pathNeedsUpdate = true;
+    }
 
     @Override
     public void run() {
@@ -169,16 +205,14 @@ public class Pathfinder implements Runnable {
             node = boundary.removeFirst();
 
             if (node.packedPosition == targetPacked) {
-                bestLastNode = node;
-                pathNeedsUpdate = true;
+                updateBestNode(node);
                 break;
             }
 
             int distance = WorldPointUtil.distanceBetween(node.packedPosition, targetPacked);
             long heuristic = distance + WorldPointUtil.distanceBetween(node.packedPosition, targetPacked, 2);
             if (heuristic < bestHeuristic || (heuristic <= bestHeuristic && distance < bestDistance)) {
-                bestLastNode = node;
-                pathNeedsUpdate = true;
+                updateBestNode(node);
                 bestDistance = distance;
                 bestHeuristic = heuristic;
                 cutoffTimeMillis = System.currentTimeMillis() + cutoffDurationMillis;
@@ -190,8 +224,7 @@ public class Pathfinder implements Runnable {
 
             // Check if target was found without processing the queue to find it
             if ((p = addNeighbors(node)) != null) {
-                bestLastNode = p;
-                pathNeedsUpdate = true;
+                updateBestNode(p);
                 break;
             }
         }

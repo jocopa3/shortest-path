@@ -6,12 +6,12 @@ import shortestpath.WorldPointUtil;
 
 public class WorldPointPair {
 	@Getter
-	private final int start, end, distance, cost;
+	private final int start, end, distance, value;
 	@Getter
 	private final WorldPoint startPoint, endPoint;
 
-	public WorldPointPair(int start, int end, int cost) {
-		this.cost = cost;
+	public WorldPointPair(int start, int end, int value) {
+		this.value = value;
 		this.start = start;
 		this.end = end;
 		this.startPoint = WorldPointUtil.unpackWorldPoint(start);
@@ -19,8 +19,8 @@ public class WorldPointPair {
 		distance = startPoint.distanceTo(endPoint);
 	}
 
-	public WorldPointPair(WorldPoint start, WorldPoint end, int cost) {
-		this.cost = cost;
+	public WorldPointPair(WorldPoint start, WorldPoint end, int value) {
+		this.value = value;
 		this.start = WorldPointUtil.packWorldPoint(start);
 		this.end = WorldPointUtil.packWorldPoint(end);
 		this.startPoint = start;

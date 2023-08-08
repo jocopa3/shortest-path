@@ -264,11 +264,7 @@ public class PrimitiveIntHashMap<V> {
 
         private boolean incrementBucketIndex() {
             ++bucketIndex;
-            if (bucket < 0 || bucket >= map.buckets.length || bucketIndex == map.buckets[bucket].length || map.buckets[bucket][bucketIndex] == null) {
-                return false;
-            }
-
-            return true;
+            return bucket >= 0 && bucket < map.buckets.length && bucketIndex != map.buckets[bucket].length && map.buckets[bucket][bucketIndex] != null;
         }
 
         @Override

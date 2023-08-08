@@ -386,14 +386,14 @@ public interface ShortestPathConfig extends Config {
     }
 
     @ConfigItem(
-        keyName = "debugPathfinding",
-        name = "Debug Pathfinding",
-        description = "Debug Pathfinding",
-        position = 33,
-        section = sectionDebug
+            keyName = "debugPathfindingMode",
+            name = "Pathfinding Debug Mode",
+            description = "Change the mode for the World Map pathfinder debug view",
+            position = 33,
+            section = sectionDebug
     )
-    default boolean debugPathfinding() {
-        return false;
+    default PathfinderDebugMode debugPathfindingMode() {
+        return PathfinderDebugMode.OFF;
     }
 
     @Units(
@@ -405,8 +405,8 @@ public interface ShortestPathConfig extends Config {
     )
     @ConfigItem(
         keyName = "debugPathfindingDelay",
-        name = "Debug Pathfinding Delay",
-        description = "Debug Pathfinding Delay",
+        name = "Pathfinding Debug Step Delay",
+        description = "How long to wait between pathfinding debug steps",
         position = 34,
         section = sectionDebug
     )

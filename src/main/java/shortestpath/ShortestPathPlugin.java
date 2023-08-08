@@ -245,12 +245,12 @@ public class ShortestPathPlugin extends Plugin {
                 @Override
                 public void run() {
                     synchronized (pathfinderMutex) {
-                        if (pathfinder.isDone()) {
+                        if (pathfinder == null || pathfinder.isDone()) {
                             debugTimerTask.cancel();
                             return;
                         }
 
-                        if (config.debugPathfinding() && pathfinder != null && !pathfinder.isDone() && !pathfinder.isCancelled()) {
+                        if (config.debugPathfindingMode() != PathfinderDebugMode.OFF && pathfinder != null && !pathfinder.isDone() && !pathfinder.isCancelled()) {
                             pathfinder.debugStep();
                             if (!pathfinder.isActive()) {
                                 pathfindingExecutor.submit(pathfinder);
@@ -280,7 +280,7 @@ public class ShortestPathPlugin extends Plugin {
                 });
             }
 
-            if (config.debugPathfinding() && debugTimerTask == null) {
+            if (config.debugPathfindingMode() != PathfinderDebugMode.OFF && debugTimerTask == null) {
                 debugTimerTask = new Timer();
             }
         }
@@ -340,13 +340,13 @@ public class ShortestPathPlugin extends Plugin {
                     overlayManager.remove(debugOverlayPanel);
                 }
                 return;
-            case "debugPathfinding":
+            case "debugPathfindingMode":
                 if (pathfinder != null) {
                     restartPathfinding(pathfinder.getStart(), pathfinder.getTarget());
                 }
                 return;
             case "debugPathfindingDelay":
-                if (config.debugPathfinding() && debugTimerTask != null) {
+                if (config.debugPathfindingMode() != PathfinderDebugMode.OFF && debugTimerTask != null) {
                     debugTimerTask.cancel();
                     createDebugTimer();
                 }
@@ -530,7 +530,7 @@ public class ShortestPathPlugin extends Plugin {
     private void setTarget(PluginIdentifier requester, WorldPoint target) {
         PathParameters parameters = pathManager.getParameters(requester);
         if (parameters == null) {
-            parameters = new PathParameters(requester, null, target, config.debugPathfinding(), true);
+            parameters = new PathParameters(requester, null, target, config.debugPathfindingMode() != PathfinderDebugMode.OFF, true);
         } else {
             parameters = new PathParameters(requester, parameters.getStart(), target, parameters.isMarkerHidden(), parameters.isVisible());
         }
@@ -556,6 +556,10 @@ public class ShortestPathPlugin extends Plugin {
     public void requestPath(PathParameters parameters) {
         if (parameters == null) {
             return;
+        }
+
+        if (config.debugPathfindingMode() != PathfinderDebugMode.OFF) {
+            parameters = new PathParameters(parameters.getRequester(), parameters.getStart(), parameters.getTarget(), true, parameters.isVisible());
         }
 
         boolean currentParametersChanged = pathManager.requestPath(parameters);

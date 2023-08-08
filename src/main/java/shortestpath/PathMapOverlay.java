@@ -9,6 +9,7 @@ import java.awt.Rectangle;
 import java.awt.Stroke;
 import java.awt.geom.Area;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import net.runelite.api.Client;
 import net.runelite.api.Point;
@@ -29,6 +30,9 @@ public class PathMapOverlay extends Overlay {
     private final Client client;
     private final ShortestPathPlugin plugin;
     private final ShortestPathConfig config;
+
+    private final Stroke lineStroke = new BasicStroke();
+    private final Stroke dashedStroke = new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{9}, 0);
 
     @Inject
     private WorldMapOverlay worldMapOverlay;
@@ -92,7 +96,7 @@ public class PathMapOverlay extends Overlay {
 
         Pathfinder pathfinder = plugin.getPathfinder();
         if (pathfinder != null) {
-            if (config.debugPathfinding()) {
+            if (config.debugPathfindingMode() != PathfinderDebugMode.OFF) {
                 drawDebug(graphics, pathfinder);
             } else {
                 Color colour = pathfinder.isDone() ? config.colourPath() : config.colourPathCalculating();
@@ -132,7 +136,7 @@ public class PathMapOverlay extends Overlay {
         y -= height / 2;
 
         if (point.distanceTo(offset) > 1) {
-            graphics.setStroke(new BasicStroke(1, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL, 0, new float[]{9}, 0));
+            graphics.setStroke(dashedStroke);
             graphics.drawLine(start.getX(), start.getY(), end.getX(), end.getY());
         } else {
             Point cursorPos = client.getMouseCanvasPosition();
@@ -169,7 +173,6 @@ public class PathMapOverlay extends Overlay {
         return new Rectangle(topLeft.getX(), bottomRight.getY(), bottomRight.getX() - topLeft.getX(), topLeft.getY() - bottomRight.getY());
     }
 
-    private final Stroke lineStroke = new BasicStroke();
     private void drawLine(Graphics2D graphics, WorldPoint startPoint, WorldPoint endPoint) {
         Point start = plugin.mapWorldPointToGraphicsPoint(startPoint);
         Point end = plugin.mapWorldPointToGraphicsPoint(endPoint);
@@ -178,7 +181,8 @@ public class PathMapOverlay extends Overlay {
             return;
         }
 
-        graphics.setStroke(lineStroke);
+        Stroke stroke = startPoint.distanceTo(endPoint) > 1 ? dashedStroke : lineStroke;
+        graphics.setStroke(stroke);
         graphics.drawLine(start.getX(), start.getY(), end.getX(), end.getY());
     }
 
@@ -190,20 +194,33 @@ public class PathMapOverlay extends Overlay {
             return;
         }
 
-        int x = start.getX();
-        int y = start.getY();
         final int pixelsPerTile = (int)worldMap.getWorldMapZoom();
-        final int width = pixelsPerTile;
-        final int height = pixelsPerTile;
-        x -= width / 2;
-        y -= height / 2;
+        final int x = start.getX() - pixelsPerTile / 2;
+        final int y = start.getY() - pixelsPerTile / 2;
 
-        graphics.fillRect(x, y, width, height);
+        graphics.fillRect(x, y, pixelsPerTile, pixelsPerTile);
+    }
+
+    private void drawEdge(Graphics2D graphics, WorldPointPair edge, Rectangle extent, int plane) {
+        WorldPoint start = edge.getStartPoint();
+        WorldPoint end = edge.getEndPoint();
+        if (
+                start.getPlane() != plane
+                        || end.getPlane() != plane
+                        || !(extent.contains(start.getX(), start.getY()) || extent.contains(end.getX(), end.getY()))
+        ) {
+            return;
+        }
+
+        if (edge.getDistance() <= 1) {
+            drawLine(graphics, start, end);
+        }
     }
 
     private void drawDebug(Graphics2D graphics, Pathfinder pathfinder) {
         List<WorldPointPair> edges = pathfinder.getEdges();
-        if (pathfinder.isActive() || pathfinder.isCancelled() || edges == null) {
+        PrimitiveIntHashMap<WorldPointPair> edgesMap = pathfinder.getEdgesMap();
+        if (pathfinder.isActive() || pathfinder.isCancelled() || (edges == null && edgesMap == null)) {
             return;
         }
 
@@ -212,20 +229,25 @@ public class PathMapOverlay extends Overlay {
         extent.setSize(extent.width + 1, extent.height + 1); // Fit the edges
 
         final int plane = client.getPlane();
-        for (int i = 0; i < edges.size(); ++i) {
-            WorldPointPair edge = edges.get(i);
-            WorldPoint start = edge.getStartPoint();
-            WorldPoint end = edge.getEndPoint();
-            if (
-                    start.getPlane() != plane
-                    || end.getPlane() != plane
-                    || !(extent.contains(start.getX(), start.getY()) || extent.contains(end.getX(), end.getY()))
-            ) {
-                continue;
+        if (edges != null) {
+            for (int i = 0; i < edges.size(); ++i) {
+                if (pathfinder.isActive()) break;
+                WorldPointPair edge = edges.get(i);
+                drawEdge(graphics, edge, extent, plane);
             }
+        } else {
+            Iterator<WorldPointPair> iter = edgesMap.iterator();
+            int oldColor = 0;
+            while (iter.hasNext()) {
+                if (pathfinder.isActive()) break;
 
-            if (edge.getDistance() <= 1) {
-                drawLine(graphics, start, end);
+                WorldPointPair edge = iter.next();
+                if (edge.getValue() != oldColor) {
+                    oldColor = edge.getValue();
+                    graphics.setColor(new Color(oldColor, false));
+                }
+
+                drawEdge(graphics, edge, extent, plane);
             }
         }
 

@@ -3,6 +3,8 @@ package shortestpath.pathfinder;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+
+import lombok.Getter;
 import net.runelite.api.coords.WorldPoint;
 import shortestpath.WorldPointUtil;
 
@@ -10,6 +12,9 @@ public class Node {
     public final int packedPosition;
     public final Node previous;
     public final int cost;
+
+    @Getter
+    int children = 0, deadEnds = 0;
 
     public Node(WorldPoint position, Node previous) {
         this(position, previous, 0);
@@ -27,6 +32,10 @@ public class Node {
         this.packedPosition = packedPosition;
         this.previous = previous;
         this.cost = cost(previous, wait);
+
+        if (previous != null) {
+            previous.children++;
+        }
     }
 
     public List<WorldPoint> getPath() {

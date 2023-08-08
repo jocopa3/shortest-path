@@ -13,6 +13,7 @@ import net.runelite.api.QuestState;
 import net.runelite.api.Skill;
 import net.runelite.api.coords.WorldArea;
 import net.runelite.api.coords.WorldPoint;
+import shortestpath.PathfinderDebugMode;
 import shortestpath.ShortestPathConfig;
 import shortestpath.PrimitiveIntHashMap;
 import shortestpath.Transport;
@@ -40,7 +41,7 @@ public class PathfinderConfig {
     @Getter
     private boolean avoidWilderness;
     @Getter
-    private boolean debugPathfinding;
+    private PathfinderDebugMode debugPathfindingMode;
     private boolean useAgilityShortcuts,
         useGrappleShortcuts,
         useBoats,
@@ -75,7 +76,7 @@ public class PathfinderConfig {
     }
 
     public void refresh() {
-        calculationCutoffMillis = config.calculationCutoff() * Constants.GAME_TICK_LENGTH;
+        calculationCutoffMillis = (long)config.calculationCutoff() * Constants.GAME_TICK_LENGTH;
         avoidWilderness = config.avoidWilderness();
         useAgilityShortcuts = config.useAgilityShortcuts();
         useGrappleShortcuts = config.useGrappleShortcuts();
@@ -88,7 +89,7 @@ public class PathfinderConfig {
         useGnomeGliders = config.useGnomeGliders();
         useTeleportationLevers = config.useTeleportationLevers();
         useTeleportationPortals = config.useTeleportationPortals();
-        debugPathfinding = config.debugPathfinding();
+        debugPathfindingMode = config.debugPathfindingMode();
 
         if (GameState.LOGGED_IN.equals(client.getGameState())) {
             agilityLevel = client.getBoostedSkillLevel(Skill.AGILITY);
@@ -131,6 +132,10 @@ public class PathfinderConfig {
             transports.put(point, usableTransports);
             transportsPacked.put(WorldPointUtil.packWorldPoint(point), usableTransports);
         }
+    }
+
+    public boolean isDebuggingPathfinding() {
+        return debugPathfindingMode != PathfinderDebugMode.OFF;
     }
 
     public static boolean isInWilderness(WorldPoint p) {
