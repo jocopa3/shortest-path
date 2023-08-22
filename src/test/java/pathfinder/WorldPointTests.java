@@ -43,10 +43,10 @@ public class WorldPointTests {
 
     @Test
     public void testWorldPointPacking() {
-        WorldPoint point = new WorldPoint(13, 24685, 1);
+        WorldPoint point = new WorldPoint(13, 9712, 1);
 
         final int packedPoint = packWorldPoint(point);
-        Assert.assertEquals(0x7036800D, packedPoint); // Manually verified
+        Assert.assertEquals(0x100365F0, packedPoint); // Manually verified
 
         final int unpackedX = unpackWorldX(packedPoint);
         Assert.assertEquals(point.getX(), unpackedX);
@@ -63,40 +63,40 @@ public class WorldPointTests {
 
     @Test
     public void testDistanceBetween() {
-        WorldPoint pointA = new WorldPoint(13, 24685, 1);
-        WorldPoint pointB = new WorldPoint(29241, 3384, 1);
+        WorldPoint pointA = new WorldPoint(13, 9712, 1);
+        WorldPoint pointB = new WorldPoint(14221, 3384, 1);
         WorldPoint pointC = new WorldPoint(292, 3384, 0); // Test point on different plane
 
         Assert.assertEquals(0, distanceBetween(pointA, pointA));
-        Assert.assertEquals(29228, distanceBetween(pointA, pointB));
-        Assert.assertEquals(29228, distanceBetween(pointB, pointA));
-        Assert.assertEquals(21301, distanceBetween(pointA, pointC));
+        Assert.assertEquals(14208, distanceBetween(pointA, pointB));
+        Assert.assertEquals(14208, distanceBetween(pointB, pointA));
+        Assert.assertEquals(6328, distanceBetween(pointA, pointC));
 
         // with diagonal = 2
         Assert.assertEquals(0, distanceBetween(pointA, pointA, 2));
-        Assert.assertEquals(50529, distanceBetween(pointA, pointB, 2));
-        Assert.assertEquals(50529, distanceBetween(pointB, pointA, 2));
-        Assert.assertEquals(28949, distanceBetween(pointB, pointC, 2));
+        Assert.assertEquals(20536, distanceBetween(pointA, pointB, 2));
+        Assert.assertEquals(20536, distanceBetween(pointB, pointA, 2));
+        Assert.assertEquals(13929, distanceBetween(pointB, pointC, 2));
     }
 
     @Test
     public void testPackedDistanceBetween() {
-        WorldPoint pointA = new WorldPoint(13, 24685, 1);
-        WorldPoint pointB = new WorldPoint(29241, 3384, 1);
+        WorldPoint pointA = new WorldPoint(13, 9712, 1);
+        WorldPoint pointB = new WorldPoint(14221, 3384, 1);
         WorldPoint pointC = new WorldPoint(292, 3384, 0); // Test point on different plane
         final int packedPointA = packWorldPoint(pointA);
         final int packedPointB = packWorldPoint(pointB);
         final int packedPointC = packWorldPoint(pointC);
 
         Assert.assertEquals(0, distanceBetween(packedPointA, packedPointA));
-        Assert.assertEquals(29228, distanceBetween(packedPointA, packedPointB));
-        Assert.assertEquals(29228, distanceBetween(packedPointB, packedPointA));
-        Assert.assertEquals(21301, distanceBetween(packedPointA, packedPointC));
+        Assert.assertEquals(14208, distanceBetween(packedPointA, packedPointB));
+        Assert.assertEquals(14208, distanceBetween(packedPointB, packedPointA));
+        Assert.assertEquals(6328, distanceBetween(packedPointA, packedPointC));
 
         // with diagonal = 2
         Assert.assertEquals(0, distanceBetween(packedPointA, packedPointA, 2));
-        Assert.assertEquals(50529, distanceBetween(packedPointA, packedPointB, 2));
-        Assert.assertEquals(50529, distanceBetween(packedPointB, packedPointA, 2));
-        Assert.assertEquals(28949, distanceBetween(packedPointB, packedPointC, 2));
+        Assert.assertEquals(20536, distanceBetween(packedPointA, packedPointB, 2));
+        Assert.assertEquals(20536, distanceBetween(packedPointB, packedPointA, 2));
+        Assert.assertEquals(13929, distanceBetween(packedPointB, packedPointC, 2));
     }
 }

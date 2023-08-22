@@ -60,6 +60,7 @@ import net.runelite.client.util.Text;
 import shortestpath.pathfinder.CollisionMap;
 import shortestpath.pathfinder.Pathfinder;
 import shortestpath.pathfinder.PathfinderConfig;
+import shortestpath.pathfinder.PathfinderResources;
 import shortestpath.pathfinder.SplitFlagMap;
 
 @PluginDescriptor(
@@ -143,6 +144,7 @@ public class ShortestPathPlugin extends Plugin {
     @Getter
     private Pathfinder pathfinder;
     private PathfinderConfig pathfinderConfig;
+    private PathfinderResources pathfinderResources;
 
     @Getter
     private PluginPathManager pathManager;
@@ -165,7 +167,8 @@ public class ShortestPathPlugin extends Plugin {
             SplitFlagMap map = SplitFlagMap.fromResources();
             Map<WorldPoint, List<Transport>> transports = Transport.loadAllFromResources();
 
-            pathfinderConfig = new PathfinderConfig(map, transports, client, config);
+            pathfinderConfig = new PathfinderConfig(transports, client, config);
+            pathfinderResources = new PathfinderResources(map);
 
             apiHandler = new ShortestPathAPI(this);
 
@@ -288,7 +291,7 @@ public class ShortestPathPlugin extends Plugin {
         getClientThread().invokeLater(() -> {
             pathfinderConfig.refresh();
             synchronized (pathfinderMutex) {
-                pathfinder = new Pathfinder(pathfinderConfig, start, end);
+                pathfinder = new Pathfinder(pathfinderConfig, pathfinderResources, start, end);
                 pathfinderFuture = pathfindingExecutor.submit(pathfinder);
             }
             createDebugTimer();
@@ -447,7 +450,7 @@ public class ShortestPathPlugin extends Plugin {
     }
 
     public CollisionMap getMap() {
-        return pathfinderConfig.getMap();
+        return pathfinderResources.getCollisionMapInstance();
     }
 
     private void onMenuOptionClicked(MenuEntry entry) {

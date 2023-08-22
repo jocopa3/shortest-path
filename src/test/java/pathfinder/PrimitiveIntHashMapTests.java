@@ -3,7 +3,7 @@ package pathfinder;
 import net.runelite.api.coords.WorldPoint;
 import org.junit.Assert;
 import org.junit.Test;
-import shortestpath.PrimitiveIntHashMap;
+import shortestpath.datastructures.PrimitiveIntHashMap;
 import shortestpath.Transport;
 import shortestpath.WorldPointUtil;
 

@@ -22,17 +22,20 @@ import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.MockitoJUnitRunner;
+import shortestpath.PathfinderDebugMode;
 import shortestpath.ShortestPathConfig;
 import shortestpath.ShortestPathPlugin;
 import shortestpath.Transport;
 import shortestpath.Util;
 import shortestpath.pathfinder.Pathfinder;
 import shortestpath.pathfinder.PathfinderConfig;
+import shortestpath.pathfinder.PathfinderResources;
 import shortestpath.pathfinder.SplitFlagMap;
 
 @RunWith(MockitoJUnitRunner.class)
 public class PathfinderTest {
     private static final SplitFlagMap map = SplitFlagMap.fromResources();
+    private static final PathfinderResources resources = new PathfinderResources(map);
     private static final Map<WorldPoint, List<Transport>> transports = Transport.loadAllFromResources();
     private static PathfinderConfig pathfinderConfig;
 
@@ -115,7 +118,8 @@ public class PathfinderTest {
     private void setupQuests(QuestState questState) {
         when(client.getGameState()).thenReturn(GameState.LOGGED_IN);
         when(client.getClientThread()).thenReturn(Thread.currentThread());
-        pathfinderConfig = spy(new PathfinderConfig(map, transports, client, config));
+        pathfinderConfig = spy(new PathfinderConfig(transports, client, config));
+        doReturn(PathfinderDebugMode.OFF).when(pathfinderConfig).getDebugPathfindingMode();
         doReturn(questState).when(pathfinderConfig).getQuestState((Quest) any(Object.class));
     }
 
@@ -155,6 +159,7 @@ public class PathfinderTest {
         pathfinderConfig.refresh();
         Pathfinder pathfinder = new Pathfinder(
             pathfinderConfig,
+            resources,
             new WorldPoint(startX, startY, startZ),
             new WorldPoint(endX, endY, endZ));
 

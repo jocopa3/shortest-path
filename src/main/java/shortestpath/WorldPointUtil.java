@@ -11,7 +11,7 @@ public class WorldPointUtil {
     // Packs a world point into a single int
     // First 15 bits are x, next 15 are y, last 2 bits are the plane
     public static int packWorldPoint(int x, int y, int plane) {
-        return (x & 0x7FFF) | ((y & 0x7FFF) << 15) | ((plane & 0x3) << 30);
+        return (y & 0x3FFF) | ((x & 0x3FFF) << 14) | ((plane & 0x3) << 28);
     }
 
     public static WorldPoint unpackWorldPoint(int packedPoint) {
@@ -22,15 +22,15 @@ public class WorldPointUtil {
     }
 
     public static int unpackWorldX(int packedPoint) {
-        return packedPoint & 0x7FFF;
+        return (packedPoint >> 14) & 0x3FFF;
     }
 
     public static int unpackWorldY(int packedPoint) {
-        return (packedPoint >> 15) & 0x7FFF;
+        return packedPoint & 0x3FFF;
     }
 
     public static int unpackWorldPlane(int packedPoint) {
-        return (packedPoint >> 30) & 0x3;
+        return (packedPoint >> 28) & 0x3;
     }
 
     public static int distanceBetween(int previousPacked, int currentPacked) {

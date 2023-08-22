@@ -3,6 +3,8 @@ package shortestpath.pathfinder;
 import net.runelite.api.coords.WorldPoint;
 import shortestpath.WorldPointUtil;
 
+import java.util.Arrays;
+
 import static net.runelite.api.Constants.REGION_SIZE;
 
 public class VisitedTiles {
@@ -69,9 +71,10 @@ public class VisitedTiles {
     }
 
     public void clear() {
+        // Clear individual regions to avoid reallocation
         for (int i = 0; i < visitedRegions.length; ++i) {
             if (visitedRegions[i] != null) {
-                visitedRegions[i] = null;
+                visitedRegions[i].clear();
             }
         }
     }
@@ -110,6 +113,10 @@ public class VisitedTiles {
                 return true;
             }
             return (planes[y + plane * REGION_SIZE] & (1L << x)) != 0;
+        }
+
+        public void clear() {
+            Arrays.fill(planes, 0);
         }
     }
 }

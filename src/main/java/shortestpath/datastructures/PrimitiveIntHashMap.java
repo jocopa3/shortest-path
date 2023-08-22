@@ -1,4 +1,4 @@
-package shortestpath;
+package shortestpath.datastructures;
 
 import java.util.Arrays;
 import java.util.ConcurrentModificationException;
@@ -142,20 +142,12 @@ public class PrimitiveIntHashMap<V> {
         return newBucket;
     }
 
-    private int getNewMaxSize(int size) {
-        int nextPow2 = -1 >>> Integer.numberOfLeadingZeros(size);
-        if (nextPow2 >= (Integer.MAX_VALUE >>> 1)) {
-            return (Integer.MAX_VALUE >>> 1) + 1;
-        }
-        return nextPow2 + 1;
-    }
-
     private void setNewSize(int size) {
         if (size < MINIMUM_SIZE) {
             size = MINIMUM_SIZE - 1;
         }
 
-        maxSize = getNewMaxSize(size);
+        maxSize = PrimitiveHelpers.getNextPow2(size);
         mask = maxSize - 1;
         capacity = (int)(maxSize * loadFactor);
     }

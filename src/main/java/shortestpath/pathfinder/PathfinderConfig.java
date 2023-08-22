@@ -15,7 +15,7 @@ import net.runelite.api.coords.WorldArea;
 import net.runelite.api.coords.WorldPoint;
 import shortestpath.PathfinderDebugMode;
 import shortestpath.ShortestPathConfig;
-import shortestpath.PrimitiveIntHashMap;
+import shortestpath.datastructures.PrimitiveIntHashMap;
 import shortestpath.Transport;
 import shortestpath.WorldPointUtil;
 
@@ -23,8 +23,6 @@ public class PathfinderConfig {
     private static final WorldArea WILDERNESS_ABOVE_GROUND = new WorldArea(2944, 3523, 448, 448, 0);
     private static final WorldArea WILDERNESS_UNDERGROUND = new WorldArea(2944, 9918, 320, 442, 0);
 
-    private final SplitFlagMap mapData;
-    private final ThreadLocal<CollisionMap> map;
     private final Map<WorldPoint, List<Transport>> allTransports;
     @Getter
     private Map<WorldPoint, List<Transport>> transports;
@@ -60,19 +58,12 @@ public class PathfinderConfig {
     private int woodcuttingLevel;
     private Map<Quest, QuestState> questStates = new HashMap<>();
 
-    public PathfinderConfig(SplitFlagMap mapData, Map<WorldPoint, List<Transport>> transports, Client client,
-                            ShortestPathConfig config) {
-        this.mapData = mapData;
-        this.map = ThreadLocal.withInitial(() -> new CollisionMap(this.mapData));
+    public PathfinderConfig(Map<WorldPoint, List<Transport>> transports, Client client, ShortestPathConfig config) {
         this.allTransports = transports;
         this.transports = new HashMap<>(allTransports.size());
         this.transportsPacked = new PrimitiveIntHashMap<>(allTransports.size());
         this.client = client;
         this.config = config;
-    }
-
-    public CollisionMap getMap() {
-        return map.get();
     }
 
     public void refresh() {

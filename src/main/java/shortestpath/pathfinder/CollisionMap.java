@@ -6,6 +6,7 @@ import java.util.List;
 
 import shortestpath.Transport;
 import shortestpath.WorldPointUtil;
+import shortestpath.datastructures.PrimitiveIntQueue;
 
 public class CollisionMap {
 
@@ -70,25 +71,28 @@ public class CollisionMap {
     }
 
     // This is only safe if pathfinding is single-threaded
-    private final List<Node> neighbors = new ArrayList<>(16);
+    private final PrimitiveIntQueue neighbors = new PrimitiveIntQueue(16);
     private final boolean[] traversable = new boolean[8];
 
-    public List<Node> getNeighbors(Node node, VisitedTiles visited, PathfinderConfig config) {
-        final int x = WorldPointUtil.unpackWorldX(node.packedPosition);
-        final int y = WorldPointUtil.unpackWorldY(node.packedPosition);
-        final int z = WorldPointUtil.unpackWorldPlane(node.packedPosition);
+    public PrimitiveIntQueue getNeighbors(int node, VisitedTiles visited, NodeTree nodes, PathfinderConfig config) {
+        final long nodeData = nodes.getNode(node);
+        final int nodePos = NodeTree.unpackNodePosition(nodeData);
+        final int nodeCost = NodeTree.unpackNodeCost(nodeData);
+        final int x = WorldPointUtil.unpackWorldX(nodePos);
+        final int y = WorldPointUtil.unpackWorldY(nodePos);
+        final int z = WorldPointUtil.unpackWorldPlane(nodePos);
 
         neighbors.clear();
 
         @SuppressWarnings("unchecked") // Casting EMPTY_LIST to List<Transport> is safe here
-        List<Transport> transports = config.getTransportsPacked().getOrDefault(node.packedPosition, (List<Transport>)Collections.EMPTY_LIST);
+        List<Transport> transports = config.getTransportsPacked().getOrDefault(nodePos, (List<Transport>)Collections.EMPTY_LIST);
 
         // Transports are pre-filtered by PathfinderConfig.refreshTransportData
         // Thus any transports in the list are guaranteed to be valid per the user's settings
         for (int i = 0; i < transports.size(); ++i) {
             Transport transport = transports.get(i);
             if (visited.get(transport.getDestination())) continue;
-            neighbors.add(new TransportNode(transport.getDestination(), node, transport.getWait()));
+            neighbors.push(nodes.addNode(node, WorldPointUtil.packWorldPoint(transport.getDestination()), transport.getWait()));
         }
 
         if (isBlocked(x, y, z)) {
@@ -121,18 +125,18 @@ public class CollisionMap {
 
         for (int i = 0; i < traversable.length; i++) {
             OrdinalDirection d = ORDINAL_VALUES[i];
-            int neighborPacked = packedPointFromOrdinal(node.packedPosition, d);
+            int neighborPacked = packedPointFromOrdinal(nodePos, d);
             if (visited.get(neighborPacked)) continue;
 
             if (traversable[i]) {
-                neighbors.add(new Node(neighborPacked, node));
+                neighbors.push(nodes.addNode(node, neighborPacked, 1));
             } else if (Math.abs(d.x + d.y) == 1 && isBlocked(x + d.x, y + d.y, z)) {
                 @SuppressWarnings("unchecked") // Casting EMPTY_LIST to List<Transport> is safe here
                 List<Transport> neighborTransports = config.getTransportsPacked().getOrDefault(neighborPacked, (List<Transport>)Collections.EMPTY_LIST);
                 for (int t = 0; t < neighborTransports.size(); ++t) {
                     Transport transport = neighborTransports.get(t);
                     if (visited.get(transport.getOrigin())) continue;
-                    neighbors.add(new Node(transport.getOrigin(), node));
+                    neighbors.push(nodes.addNode(node, WorldPointUtil.packWorldPoint(transport.getOrigin()), 1));
                 }
             }
         }

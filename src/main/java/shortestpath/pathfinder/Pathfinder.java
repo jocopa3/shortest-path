@@ -1,9 +1,9 @@
 package shortestpath.pathfinder;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Deque;
+import java.util.Comparator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Queue;
@@ -11,8 +11,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import lombok.Getter;
 import net.runelite.api.coords.WorldPoint;
-import shortestpath.PrimitiveIntHashMap;
+import shortestpath.datastructures.PrimitiveIntHashMap;
 import shortestpath.WorldPointUtil;
+import shortestpath.datastructures.PrimitiveIntQueue;
 
 public class Pathfinder implements Runnable {
     private PathfinderStats stats;
@@ -23,19 +24,18 @@ public class Pathfinder implements Runnable {
     private final WorldPoint start;
     @Getter
     private final WorldPoint target;
-
     private final int targetPacked;
+    private final boolean targetInWilderness;
 
     private final PathfinderConfig config;
     private final CollisionMap map;
-    private final boolean targetInWilderness;
+    private final Queue<Integer> pending;
+    private final PrimitiveIntQueue boundary;
+    private final NodeTree nodes;
+    private static VisitedTiles visited;
 
-    // Capacities should be enough to store all nodes without requiring the queue to grow
-    // They were found by checking the max queue size
-    private final Deque<Node> boundary = new ArrayDeque<>(4096);
-    private final Queue<Node> pending = new PriorityQueue<>(256);
-    private final VisitedTiles visited;
-
+    // Debug types
+    private AtomicInteger maxStep = new AtomicInteger(Integer.MAX_VALUE);
     @Getter
     private List<WorldPointPair> edges;
     @Getter
@@ -44,20 +44,32 @@ public class Pathfinder implements Runnable {
     @SuppressWarnings("unchecked") // Casting EMPTY_LIST is safe here
     private List<WorldPoint> path = (List<WorldPoint>)Collections.EMPTY_LIST;
     private boolean pathNeedsUpdate = false;
-    private Node bestLastNode;
-
-    private AtomicInteger maxStep = new AtomicInteger(Integer.MAX_VALUE);
+    private int bestLastNodeIndex;
 
     @Getter
     private volatile boolean active = false;
 
-    public Pathfinder(PathfinderConfig config, WorldPoint start, WorldPoint target) {
+    public Pathfinder(PathfinderConfig config, PathfinderResources resources, WorldPoint start, WorldPoint target) {
         stats = new PathfinderStats();
+
         this.config = config;
-        this.map = config.getMap();
+        this.map = resources.getCollisionMapInstance();
+        this.nodes = resources.getNodeTreeInstance();
+        this.visited = resources.getVisitedTilesInstance();
+        this.boundary = resources.getBoundaryQueueInstance();
         this.start = start;
         this.target = target;
-        visited = new VisitedTiles(map);
+
+        // Pending queue has to be recreated as its cost comparator references the local nodeTree instance
+        // It's small enough an infrequently used that this reconstruction cost shouldn't matter
+        pending = new PriorityQueue<>(256, (o1, o2) -> {
+            long node1 = nodes.getNode(o1);
+            long node2 = nodes.getNode(o2);
+            return Comparator
+                    .<Integer>naturalOrder()
+                    .compare(NodeTree.unpackNodeCost(node1), NodeTree.unpackNodeCost(node2));
+        });
+
         targetPacked = WorldPointUtil.packWorldPoint(target);
         targetInWilderness = PathfinderConfig.isInWilderness(target);
 
@@ -105,75 +117,99 @@ public class Pathfinder implements Runnable {
     }
 
     public List<WorldPoint> getPath() {
-        Node lastNode = bestLastNode; // For thread safety, read bestLastNode once
-        if (lastNode == null) {
+        int lastNode = bestLastNodeIndex; // For thread safety, read bestLastNode once
+        if (lastNode < 0) {
             return path;
         }
 
         if (pathNeedsUpdate) {
-            path = lastNode.getPath();
+            List<WorldPoint> pathTemp = new LinkedList<>();
+            int nodeIndex = lastNode;
+            long nodeData = nodes.getNode(nodeIndex);
+            int nodeParentIndex = NodeTree.unpackNodeParent(nodeData);
+
+            while (nodeIndex != nodeParentIndex) {
+                WorldPoint position = NodeTree.getNodeWorldPoint(nodeData);
+                pathTemp.add(0, position);
+
+                nodeIndex = nodeParentIndex;
+                nodeData = nodes.getNode(nodeIndex);
+                nodeParentIndex = NodeTree.unpackNodeParent(nodeData);
+            }
+
+            pathTemp.add(NodeTree.getNodeWorldPoint(nodeData));
+            path = new ArrayList<>(pathTemp);
             pathNeedsUpdate = false;
         }
 
         return path;
     }
 
-    private void markDeadEnds(Node node) {
-        if (edgesMap == null) return;
-        while (node != null && node.previous != null && node.getChildren() == node.getDeadEnds()) {
-            edgesMap.put(node.packedPosition, new WorldPointPair(node.packedPosition, node.previous.packedPosition, 0xFF0000FF));
-            node = node.previous;
-            node.deadEnds++;
-        }
-    }
+//    private void markDeadEnds(Node node) {
+//        if (edgesMap == null) return;
+//        while (node != null && node.previous != null && node.getChildren() == node.getDeadEnds()) {
+//            edgesMap.put(node.packedPosition, new WorldPointPair(node.packedPosition, node.previous.packedPosition, 0xFF0000FF));
+//            node = node.previous;
+//            node.deadEnds++;
+//        }
+//    }
 
-    private void addDebugEdge(Node start, Node end) {
+    private void addDebugEdge(long start, long end) {
+        final int startPos = NodeTree.unpackNodePosition(start);
+        final int endPos = NodeTree.unpackNodePosition(end);
         if (edges != null) {
-            WorldPointPair edge = new WorldPointPair(start.packedPosition, end.packedPosition, end.cost);
+            final int endCost = NodeTree.unpackNodeCost(end);
+            WorldPointPair edge = new WorldPointPair(startPos, endPos, endCost);
             edges.add(edge);
         } else if (edgesMap != null) {
-            WorldPointPair edge = new WorldPointPair(start.packedPosition, end.packedPosition, 0xFFFF0000);
-            edgesMap.put(end.packedPosition, edge);
+            WorldPointPair edge = new WorldPointPair(startPos, endPos, 0xFFFF0000);
+            edgesMap.put(endPos, edge);
         }
     }
 
-    private Node addNeighbors(Node node) {
-        List<Node> nodes = map.getNeighbors(node, visited, config);
-        for (int i = 0; i < nodes.size(); ++i) {
-            Node neighbor = nodes.get(i);
-            addDebugEdge(node, neighbor);
+    private int addNeighbors(int nodeIndex) {
+        PrimitiveIntQueue neighbors = map.getNeighbors(nodeIndex, visited, nodes, config);
+        final long nodeData = nodes.getNode(nodeIndex);
+        final int curPos = NodeTree.unpackNodePosition(nodeData);
+        final int curCost = NodeTree.unpackNodeCost(nodeData);
+        for (int i = 0; i < neighbors.size(); ++i) {
+            int neighbor = neighbors.get(i);
+            long neighborNode = nodes.getNode(neighbor);
+            final int neighborPos = NodeTree.unpackNodePosition(neighborNode);
+            final int neighborCost = NodeTree.unpackNodeCost(neighborNode);
+            addDebugEdge(nodeData, neighborNode);
 
-            if (neighbor.packedPosition == targetPacked) {
+            if (neighborPos == targetPacked) {
                 return neighbor;
             }
 
-            if (config.isAvoidWilderness() && config.avoidWilderness(node.packedPosition, neighbor.packedPosition, targetInWilderness)) {
+            if (config.isAvoidWilderness() && config.avoidWilderness(curPos, neighborPos, targetInWilderness)) {
                 continue;
             }
 
-            visited.set(neighbor.packedPosition);
-            if (neighbor instanceof TransportNode) {
+            visited.set(neighborPos);
+            if (neighborCost - curCost > 1) {
                 pending.add(neighbor);
                 ++stats.transportsChecked;
             } else {
-                boundary.addLast(neighbor);
+                boundary.push(neighbor);
                 ++stats.nodesChecked;
             }
         }
 
-        if (nodes.isEmpty()) {
-            markDeadEnds(node);
-        }
+        //if (nodes.isEmpty()) {
+        //    markDeadEnds(node);
+        //}
 
-        return null;
+        return -1;
     }
 
     private int bestDistance = Integer.MAX_VALUE;
     private long bestHeuristic = Integer.MAX_VALUE;
 
-    private void updateBestNode(Node node) {
-        markDeadEnds(bestLastNode);
-        bestLastNode = node;
+    private void updateBestNode(int nodeIndex) {
+        //markDeadEnds(bestLastNode);
+        bestLastNodeIndex = nodeIndex;
         pathNeedsUpdate = true;
     }
 
@@ -181,7 +217,8 @@ public class Pathfinder implements Runnable {
     public void run() {
         active = true;
         stats.start();
-        boundary.addFirst(new Node(start, null));
+        bestLastNodeIndex = nodes.setRootNode(WorldPointUtil.packWorldPoint(start));
+        boundary.push(bestLastNodeIndex);
 
         long cutoffDurationMillis = config.getCalculationCutoffMillis();
         long cutoffTimeMillis = System.currentTimeMillis() + cutoffDurationMillis;
@@ -190,29 +227,37 @@ public class Pathfinder implements Runnable {
         final int nextStep = maxStep.get();
 
         while (!cancelled && (!boundary.isEmpty() || !pending.isEmpty())) {
-            Node node = boundary.peekFirst();
-            if (node != null && node.cost > nextStep) {
+            final int pendingIndex = pending.isEmpty() ? -1 : pending.peek();
+            final long pendingNode = pendingIndex < 0 ? NodeTree.INVALID_NODE : nodes.getNode(pendingIndex);
+            final int pendingNodeCost = NodeTree.unpackNodeCost(pendingNode);
+
+            int nodeIndex = boundary.peekFirst();
+            long node = nodeIndex < 0 ? NodeTree.INVALID_NODE : nodes.getNode(nodeIndex);
+            int nodeCost = NodeTree.unpackNodeCost(node);
+            if (node == NodeTree.INVALID_NODE || pendingNodeCost < nodeCost) {
+                nodeIndex = pendingIndex;
+                node = pendingNode;
+                nodeCost = pendingNodeCost;
+                pending.poll();
+            } else {
+                boundary.pop();
+            }
+
+            if (nextStep < nodeCost) {
                 debugBreak = true;
                 break;
             }
 
-            Node p = pending.peek();
-            if (p != null && (node == null || p.cost < node.cost)) {
-                boundary.addFirst(p);
-                pending.poll();
-            }
-
-            node = boundary.removeFirst();
-
-            if (node.packedPosition == targetPacked) {
-                updateBestNode(node);
+            final int nodePackedPos = NodeTree.unpackNodePosition(node);
+            if (nodePackedPos == targetPacked) {
+                updateBestNode(nodeIndex);
                 break;
             }
 
-            int distance = WorldPointUtil.distanceBetween(node.packedPosition, targetPacked);
-            long heuristic = distance + WorldPointUtil.distanceBetween(node.packedPosition, targetPacked, 2);
+            int distance = WorldPointUtil.distanceBetween(nodePackedPos, targetPacked);
+            long heuristic = distance + WorldPointUtil.distanceBetween(nodePackedPos, targetPacked, 2);
             if (heuristic < bestHeuristic || (heuristic <= bestHeuristic && distance < bestDistance)) {
-                updateBestNode(node);
+                updateBestNode(nodeIndex);
                 bestDistance = distance;
                 bestHeuristic = heuristic;
                 cutoffTimeMillis = System.currentTimeMillis() + cutoffDurationMillis;
@@ -223,18 +268,14 @@ public class Pathfinder implements Runnable {
             }
 
             // Check if target was found without processing the queue to find it
-            if ((p = addNeighbors(node)) != null) {
-                updateBestNode(p);
+            if ((nodeIndex = addNeighbors(nodeIndex)) >= 0) {
+                updateBestNode(nodeIndex);
                 break;
             }
         }
 
         if (!debugBreak) {
             done = !cancelled;
-
-            boundary.clear();
-            visited.clear();
-            pending.clear();
             stats.end(); // Include cleanup in stats to get the total cost of pathfinding
         }
 
