@@ -79,7 +79,7 @@ public class PrimitiveIntQueue {
 
 	private void growBuffer() {
 		final int oldSize = buffer.length;
-		final int newSize = oldSize < 1024 ? oldSize * 2 : oldSize + (oldSize >> 1);
+		final int newSize = oldSize < 1024 ? oldSize * 2 : oldSize + (oldSize >>> 1);
 
 		final int[] oldBuffer = buffer;
 		buffer = new int[newSize];

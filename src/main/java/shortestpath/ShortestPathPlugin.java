@@ -21,6 +21,9 @@ import java.util.TimerTask;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import lombok.Getter;
@@ -137,9 +140,10 @@ public class ShortestPathPlugin extends Plugin {
     private BufferedImage minimapSpriteResizeable;
     private Rectangle minimapRectangle = new Rectangle();
 
-    private Timer debugTimerTask;
-    private ExecutorService pathfindingExecutor;
+    private ScheduledThreadPoolExecutor pathfindingExecutor;
     private Future<?> pathfinderFuture;
+    private Future<?> debugPathfinderFuture;
+    private Runnable debugTask;
     private final Object pathfinderMutex = new Object();
     @Getter
     private Pathfinder pathfinder;
@@ -237,31 +241,36 @@ public class ShortestPathPlugin extends Plugin {
         clientToolbar.removeNavigation(navigationButton);
     }
 
-    private void createDebugTimer() {
-        synchronized (pathfinderMutex) {
-            if (debugTimerTask != null) {
-                debugTimerTask.cancel();
+    private void createDebugTask() {
+        if (config.debugPathfindingMode() == PathfinderDebugMode.OFF) {
+            return;
+        }
+
+        debugTask = () -> {
+            if (pathfinder == null || pathfinder.isDone()) {
+                cancelDebugTask();
+                return;
             }
 
-            debugTimerTask = new Timer();
-            debugTimerTask.scheduleAtFixedRate(new TimerTask() {
-                @Override
-                public void run() {
-                    synchronized (pathfinderMutex) {
-                        if (pathfinder == null || pathfinder.isDone()) {
-                            debugTimerTask.cancel();
-                            return;
-                        }
-
-                        if (config.debugPathfindingMode() != PathfinderDebugMode.OFF && pathfinder != null && !pathfinder.isDone() && !pathfinder.isCancelled()) {
-                            pathfinder.debugStep();
-                            if (!pathfinder.isActive()) {
-                                pathfindingExecutor.submit(pathfinder);
-                            }
-                        }
+            synchronized (pathfinderMutex) {
+                if (config.debugPathfindingMode() != PathfinderDebugMode.OFF && pathfinder != null && !pathfinder.isDone() && !pathfinder.isCancelled()) {
+                    pathfinder.debugStep();
+                    if (!pathfinder.isActive()) {
+                        pathfindingExecutor.submit(pathfinder);
                     }
                 }
-            }, config.debugPathfindingDelayMS(), config.debugPathfindingDelayMS());
+            }
+        };
+
+        debugPathfinderFuture = pathfindingExecutor.scheduleAtFixedRate(debugTask, config.debugPathfindingDelayMS(), config.debugPathfindingDelayMS(), TimeUnit.MILLISECONDS);
+    }
+
+    private void cancelDebugTask() {
+        synchronized (pathfinderMutex) {
+            if (debugPathfinderFuture != null) {
+                debugPathfinderFuture.cancel(false);
+                pathfindingExecutor.remove(debugTask);
+            }
         }
     }
 
@@ -270,21 +279,15 @@ public class ShortestPathPlugin extends Plugin {
             if (pathfinder != null) {
                 pathfinder.cancel();
                 pathfinderFuture.cancel(true);
-                if (debugTimerTask != null) {
-                    debugTimerTask.cancel();
-                }
+                pathfindingExecutor.remove(pathfinder);
             }
 
             if (pathfindingExecutor == null) {
-                pathfindingExecutor = Executors.newSingleThreadExecutor(r -> {
+                pathfindingExecutor = new ScheduledThreadPoolExecutor(1, r -> {
                     Thread thread = new Thread(r);
                     thread.setName("shortest-path-thread");
                     return thread;
                 });
-            }
-
-            if (config.debugPathfindingMode() != PathfinderDebugMode.OFF && debugTimerTask == null) {
-                debugTimerTask = new Timer();
             }
         }
 
@@ -294,7 +297,7 @@ public class ShortestPathPlugin extends Plugin {
                 pathfinder = new Pathfinder(pathfinderConfig, pathfinderResources, start, end);
                 pathfinderFuture = pathfindingExecutor.submit(pathfinder);
             }
-            createDebugTimer();
+            createDebugTask();
         });
     }
 
@@ -349,9 +352,9 @@ public class ShortestPathPlugin extends Plugin {
                 }
                 return;
             case "debugPathfindingDelay":
-                if (config.debugPathfindingMode() != PathfinderDebugMode.OFF && debugTimerTask != null) {
-                    debugTimerTask.cancel();
-                    createDebugTimer();
+                if (config.debugPathfindingMode() != PathfinderDebugMode.OFF && debugTask != null) {
+                    cancelDebugTask();
+                    createDebugTask();
                 }
                 return;
         }

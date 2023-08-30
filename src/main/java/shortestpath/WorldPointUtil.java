@@ -22,7 +22,7 @@ public class WorldPointUtil {
     }
 
     public static int unpackWorldX(int packedPoint) {
-        return (packedPoint >> 14) & 0x3FFF;
+        return (packedPoint >>> 14) & 0x3FFF;
     }
 
     public static int unpackWorldY(int packedPoint) {
@@ -30,7 +30,7 @@ public class WorldPointUtil {
     }
 
     public static int unpackWorldPlane(int packedPoint) {
-        return (packedPoint >> 28) & 0x3;
+        return (packedPoint >>> 28) & 0x3;
     }
 
     public static int distanceBetween(int previousPacked, int currentPacked) {

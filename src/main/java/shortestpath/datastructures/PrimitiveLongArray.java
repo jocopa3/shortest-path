@@ -33,7 +33,7 @@ public class PrimitiveLongArray {
 			// This becomes a compile-time constant
 			final int LINEAR_GROWTH_BIT_MASK = (1 << (HIGHEST_SIZE_BIT - LINEAR_GROWTH_BIT + 1)) - 1;
 
-			size = (size >> LINEAR_GROWTH_BIT) + 1;
+			size = (size >>> LINEAR_GROWTH_BIT) + 1;
 			size = size > LINEAR_GROWTH_BIT_MASK
 					? MAX_SIZE // Max size was reached
 					: (size & LINEAR_GROWTH_BIT_MASK) << LINEAR_GROWTH_BIT; // Linearly grow until max size

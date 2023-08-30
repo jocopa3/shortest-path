@@ -77,7 +77,6 @@ public class CollisionMap {
     public PrimitiveIntQueue getNeighbors(int node, VisitedTiles visited, NodeTree nodes, PathfinderConfig config) {
         final long nodeData = nodes.getNode(node);
         final int nodePos = NodeTree.unpackNodePosition(nodeData);
-        final int nodeCost = NodeTree.unpackNodeCost(nodeData);
         final int x = WorldPointUtil.unpackWorldX(nodePos);
         final int y = WorldPointUtil.unpackWorldY(nodePos);
         final int z = WorldPointUtil.unpackWorldPlane(nodePos);
@@ -92,7 +91,7 @@ public class CollisionMap {
         for (int i = 0; i < transports.size(); ++i) {
             Transport transport = transports.get(i);
             if (visited.get(transport.getDestination())) continue;
-            neighbors.push(nodes.addNode(node, WorldPointUtil.packWorldPoint(transport.getDestination()), transport.getWait()));
+            neighbors.push(nodes.addNode(node, WorldPointUtil.packWorldPoint(transport.getDestination()), transport.getWait(), true));
         }
 
         if (isBlocked(x, y, z)) {
@@ -129,14 +128,14 @@ public class CollisionMap {
             if (visited.get(neighborPacked)) continue;
 
             if (traversable[i]) {
-                neighbors.push(nodes.addNode(node, neighborPacked, 1));
+                neighbors.push(nodes.addNode(node, neighborPacked, 1, false));
             } else if (Math.abs(d.x + d.y) == 1 && isBlocked(x + d.x, y + d.y, z)) {
                 @SuppressWarnings("unchecked") // Casting EMPTY_LIST to List<Transport> is safe here
                 List<Transport> neighborTransports = config.getTransportsPacked().getOrDefault(neighborPacked, (List<Transport>)Collections.EMPTY_LIST);
                 for (int t = 0; t < neighborTransports.size(); ++t) {
                     Transport transport = neighborTransports.get(t);
                     if (visited.get(transport.getOrigin())) continue;
-                    neighbors.push(nodes.addNode(node, WorldPointUtil.packWorldPoint(transport.getOrigin()), 1));
+                    neighbors.push(nodes.addNode(node, WorldPointUtil.packWorldPoint(transport.getOrigin()), 1, true));
                 }
             }
         }
