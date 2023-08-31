@@ -64,11 +64,15 @@ public class PathfinderResources {
 
 		public T getReference() {
 			SoftReference<T> ref = threadLocal.get();
-			if (ref == null) {
+			T value = ref.get();
+			
+			if (value == null) {
 				// Remove the stale reference to allow the object to be re-initialized
 				threadLocal.remove();
+				return threadLocal.get().get();
 			}
-			return threadLocal.get().get();
+
+			return value;
 		}
 
 		public static <T> ThreadLocalSoftReference<T> withInitial(Supplier<? extends T> supplier) {
